@@ -10,7 +10,7 @@ Maintainer:     benedikt.huber@gmail.com
 Stability:      experimental
 Homepage:       http://visq.github.io/language-c/
 Bug-reports:    https://github.com/visq/language-c/issues/
-
+Tested-With:    GHC == 7.6.3, GHC == 8.0.1
 Synopsis:       Analysis and generation of C code
 Description:    Language C is a haskell library for the analysis and generation of C code.
                 It features a complete, well tested parser and pretty printer for all of C99 and a large
