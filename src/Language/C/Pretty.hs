@@ -55,7 +55,7 @@ identP :: Ident -> Doc
 identP = text . identToString
 
 -- pretty print attribute annotations
-attrlistP :: [CAttr] -> Doc
+attrlistP :: [CAttribute a] -> Doc
 attrlistP [] = empty
 attrlistP attrs = text "__attribute__" <> parens (parens (hcat . punctuate comma . map pretty $ attrs))
 
@@ -68,7 +68,7 @@ ii :: Doc -> Doc
 ii = nest 4
 
 -- Pretty instances
-instance Pretty CTranslUnit where
+instance Pretty (CTranslationUnit a) where
     pretty (CTranslUnit edecls _) = vcat (map pretty edecls)
 
 -- | Pretty print the given tranlation unit, but replace declarations from header files with @#include@ directives.
@@ -94,13 +94,13 @@ prettyUsingInclude (CTranslUnit edecls _) =
                       | otherwise = text "/* Warning: The #include directives in this file aren't necessarily correct. */"
 
 -- TODO: Check need of __extension__
-instance Pretty CExtDecl where
+instance Pretty (CExternalDeclaration a) where
     pretty (CDeclExt decl) = pretty decl <> semi
     pretty (CFDefExt fund) = pretty fund
     pretty (CAsmExt  asmStmt _) = text "asm" <> parens (pretty asmStmt) <> semi
 
 -- TODO: Check that old-style and new-style aren't mixed
-instance Pretty CFunDef where
+instance Pretty (CFunctionDef a) where
     pretty (CFunDef declspecs declr decls stat _) =          -- Example:
             hsep (map pretty declspecs)                      -- __attribute__((noreturn)) static long
         <+> pretty declr                                     -- foo(b)
@@ -108,7 +108,7 @@ instance Pretty CFunDef where
         $$ prettyPrec (-1) stat                              -- {  ...
                                                              -- }
 
-instance Pretty CStat where
+instance Pretty (CStatement a) where
     pretty (CLabel ident stat cattrs _) = identP ident <> text ":" <+> attrlistP cattrs $$ pretty stat
     pretty (CCase expr stat _) =
         text "case" <+> pretty expr <> text ":" $$ pretty stat
@@ -160,7 +160,7 @@ instance Pretty CStat where
         where ppLblDecls =  vcat . map (\l -> text "__label__" <+> identP l <+> semi)
     prettyPrec _ p = pretty p
 
-instance Pretty CAsmStmt where
+instance Pretty (CAssemblyStatement a) where
     pretty (CAsmStmt tyQual expr outOps inOps clobbers _) =
         ii $ text "__asm__" <+>
              maybeP pretty tyQual <>
@@ -173,7 +173,7 @@ instance Pretty CAsmStmt where
                    (if null clobbers then empty else clobs)
         clobs   =  text ":" <+> hcat (punctuate comma (map pretty clobbers))
 
-instance Pretty CAsmOperand where
+instance Pretty (CAssemblyOperand a) where
     -- asm_operand :~ [operand-name] "constraint" ( expr )
     pretty (CAsmOperand mArgName cnstr expr _) =
         maybeP (\argName -> text "[" <> identP argName <> text "]") mArgName <+>
@@ -181,12 +181,12 @@ instance Pretty CAsmOperand where
         parens (pretty expr)
 
 -- TODO: Check need of __extension__
-instance Pretty CBlockItem where
+instance Pretty (CCompoundBlockItem a) where
     pretty (CBlockStmt stat) = pretty stat
     pretty (CBlockDecl decl) = ii $ pretty decl <> semi
     pretty (CNestedFunDef fundef) = ii $ pretty fundef
 
-instance Pretty CDecl where
+instance Pretty (CDeclaration a) where
     -- CAVEAT:
     -- we may not print __attribute__s directly after typespecs,
     -- as this may change the semantics of the declaration.
@@ -216,7 +216,7 @@ instance Pretty CDecl where
     pretty (CStaticAssert expr str _) =
       text "_Static_assert" <> parens (hsep (punctuate comma [pretty expr, pretty str]))
 
-instance Pretty CDeclSpec where
+instance Pretty (CDeclarationSpecifier a) where
     pretty (CStorageSpec sp) = pretty sp
     pretty (CTypeSpec sp) = pretty sp
     pretty (CTypeQual qu) = pretty qu
@@ -229,7 +229,7 @@ instance Pretty CAlignSpec where
     pretty (CAlignAsExpr expr _) =
         text "_Alignas" <> parens (pretty expr)
 
-instance Pretty CStorageSpec where
+instance Pretty (CStorageSpecifier a) where
     pretty (CAuto _) = text "auto"
     pretty (CRegister _) = text "register"
     pretty (CStatic _) = text "static"
@@ -237,7 +237,7 @@ instance Pretty CStorageSpec where
     pretty (CTypedef _) = text "typedef"
     pretty (CThread _) = text "_Thread_local"
 
-instance Pretty CTypeSpec where
+instance Pretty (CTypeSpecifier a) where
     pretty (CVoidType _)        = text "void"
     pretty (CCharType _)        = text "char"
     pretty (CShortType _)       = text "short"
@@ -260,7 +260,7 @@ instance Pretty CTypeSpec where
     pretty (CAtomicType decl _) =
         text "_Atomic" <> parens (pretty decl)
 
-instance Pretty CTypeQual where
+instance Pretty (CTypeQualifier a) where
     pretty (CConstQual _) = text "const"
     pretty (CVolatQual _) = text "volatile"
     pretty (CRestrQual _) = text "__restrict"
@@ -269,11 +269,11 @@ instance Pretty CTypeQual where
     pretty (CNullableQual _) = text "_Nullable"
     pretty (CNonnullQual _) = text "_Nonnull"
 
-instance Pretty CFunSpec where
+instance Pretty (CFunctionSpecifier a) where
     pretty (CInlineQual _) = text "inline"
     pretty (CNoreturnQual _) = text "_Noreturn"
 
-instance Pretty CStructUnion where
+instance Pretty (CStructureUnion a) where
     pretty (CStruct tag ident Nothing cattrs _) = pretty tag <+> attrlistP cattrs <+> maybeP identP ident
     pretty (CStruct tag ident (Just []) cattrs _) =
         pretty tag <+> attrlistP cattrs <+> maybeP identP ident <+> text "{ }"
@@ -286,7 +286,7 @@ instance Pretty CStructTag where
     pretty CStructTag = text "struct"
     pretty CUnionTag  = text "union"
 
-instance Pretty CEnum where
+instance Pretty (CEnumeration a) where
     pretty (CEnum enum_ident Nothing cattrs _) = text "enum" <+> attrlistP cattrs <+> maybeP identP enum_ident
     pretty (CEnum enum_ident (Just vals) cattrs _) = vcat [
         text "enum" <+> attrlistP cattrs <+> maybeP identP enum_ident <+> text "{",
@@ -327,10 +327,10 @@ instance Pretty CEnum where
 --   pluralize isPlural s p = text (if isPlural then p else s)
 --   prettyList :: (Pretty a) => [a] -> Doc
 --   prettyList = hsep . punctuate comma . map pretty
-instance Pretty CDeclr where
+instance Pretty (CDeclarator a) where
     prettyPrec prec declr = prettyDeclr True prec declr
 
-prettyDeclr :: Bool -> Int -> CDeclr -> Doc
+prettyDeclr :: Bool -> Int -> (CDeclarator a) -> Doc
 prettyDeclr show_attrs prec (CDeclr name derived_declrs asmname cattrs _) =
     ppDeclr prec (reverse derived_declrs) <+> prettyAsmName asmname <+> ifP show_attrs (attrlistP cattrs)
     where
@@ -355,13 +355,13 @@ prettyDeclr show_attrs prec (CDeclr name derived_declrs asmname cattrs _) =
     prettyAsmName asm_name_opt
         = maybe empty (\asm_name -> text "__asm__" <> parens (pretty asm_name)) asm_name_opt
 
-instance Pretty CArrSize where
+instance Pretty (CArraySize a) where
   pretty (CNoArrSize completeType) = ifP completeType (text "*")
   pretty (CArrSize staticMod expr) = ifP staticMod (text "static") <+> pretty expr
 -- initializer :: { CInit }
 -- initializer :- assignment_expression
 --              | '{' (designation? initializer)_cs_list '}'
-instance Pretty CInit where
+instance Pretty (CInitializer a) where
     pretty (CInitExpr expr _) = pretty expr
     pretty (CInitList initl _) =
         text "{" <+> hsep (punctuate comma (map p initl)) <+> text "}" where
@@ -374,17 +374,17 @@ instance Pretty CInit where
 -- member_designator :-  '.' identifier
 -- arr_range _designator :- '[' constant_expression "..." constant_expression ']'
 
-instance Pretty CDesignator where
+instance Pretty (CPartDesignator a) where
     pretty (CArrDesig expr _) = text "[" <> pretty expr <> text "]"
     pretty (CMemberDesig ident _) = text "." <> identP ident
     pretty (CRangeDesig expr1 expr2 _) =
         text "[" <> pretty expr1 <+> text "..." <+> pretty expr2 <> text "]"
 
-instance Pretty CAttr where
+instance Pretty (CAttribute a) where
     pretty (CAttr attrName [] _) = identP attrName
     pretty (CAttr attrName attrParams _) = identP attrName <> parens (hsep . punctuate comma . map pretty $ attrParams)
 
-instance Pretty CExpr where
+instance Pretty (CExpression a) where
     prettyPrec p (CComma exprs _) =
         parenPrec p (-1) $ hsep (punctuate comma (map (prettyPrec 2) exprs))
     prettyPrec p (CAssign op expr1 expr2 _) =
@@ -447,7 +447,7 @@ instance Pretty CExpr where
         pAssoc (mty, expr1) = maybe (text "default") pretty mty <> text ":" <+> pretty expr1
     prettyPrec _p (CBuiltinExpr builtin) = pretty builtin
 
-instance Pretty CBuiltin where
+instance Pretty (CBuiltinThing a) where
     pretty (CBuiltinVaArg expr ty_name _) =
         text "__builtin_va_arg" <+>
         parens (pretty expr <> comma <+> pretty ty_name)
@@ -510,13 +510,13 @@ instance Pretty CUnaryOp where
     CCompOp    -> "~"
     CNegOp     -> "!"
 
-instance Pretty CConst where
+instance Pretty (CConstant a) where
     pretty (CIntConst   int_const _) = text (show int_const)
     pretty (CCharConst  chr _) = text (show chr)
     pretty (CFloatConst flt _) = text (show flt)
     pretty (CStrConst   str _) = text (show str)
 
-instance Pretty CStrLit where
+instance Pretty (CStringLiteral a) where
     pretty (CStrLit   str _) = text (show str)
 
 -- precedence of C operators
