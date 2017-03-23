@@ -1,1 +1,4 @@
-test_ty.c: TypeCheck: incompatible direct types in assignment: struct z, unsigned __int128
+test_ty.c: Error
+test_ty.c:7: (column 14) [ERROR]  >>> AST invariant violated
+  incompatible direct types in assignment: struct z, unsigned __int128
+
