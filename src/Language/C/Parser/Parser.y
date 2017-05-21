@@ -201,6 +201,7 @@ else		{ CTokElse	_ }
 enum		{ CTokEnum	_ }
 extern		{ CTokExtern	_ }
 float		{ CTokFloat	_ }
+"__float128"	{ CTokFloat128	_ }
 for		{ CTokFor	_ }
 "_Generic"      { CTokGeneric   _ }
 goto		{ CTokGoto	_ }
@@ -872,6 +873,7 @@ basic_type_name
   | "_Bool"			{% withNodeInfo $1 $ CBoolType }
   | "_Complex"			{% withNodeInfo $1 $ CComplexType }
   | "__int128"      {% withNodeInfo $1 $ CInt128Type }
+  | "__float128"      {% withNodeInfo $1 $ CFloat128Type }
 
 
 -- A mixture of type qualifiers, storage class and basic type names in any

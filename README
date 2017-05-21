@@ -33,7 +33,6 @@ Currently unsupported C11 constructs:
 
 Currently unsupported GNU C extensions:
  - __auto_type
- - __float128
  - __builtin_offsetof
    char a[__builtin_offsetof (struct S, sa->f)
  - _Decimal32
