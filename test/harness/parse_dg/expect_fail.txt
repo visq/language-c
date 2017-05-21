@@ -31,8 +31,6 @@ a.20.1.i
 addsub.i
 alias-17.i
 allconv.i
-alloca-5.i
-alloca-6.i
 allop-const.i
 allop.i
 altivec-types.i
@@ -118,8 +116,6 @@ constants-c99.i
 constants-hex.i
 constants.i
 constants-pedantic.i
-const-float128.i
-const-float128-ped.i
 const-float80.i
 const-float80-ped.i
 const-ll-1.i
@@ -193,14 +189,6 @@ fe-binop.i
 fe-convert-1.i
 fe-convert-2.i
 fe-convert-3.i
-float128-cmp-invalid.i
-float128-div-underflow.i
-float128-exact-underflow.i
-float128-extend-nan.i
-float128-extendxf-underflow.i
-float128-mul-underflow.i
-float128-truncdf-underflow.i
-float128-truncsf-underflow.i
 float-cast-overflow-atomic.i
 float-constant-double.i
 fltconst-1.i
@@ -211,10 +199,6 @@ fltconst-pedantic-dfp.i
 fold-nonneg-1.i
 for-1.i
 fp-int-convert-2.i
-fp-int-convert-float128.i
-fp-int-convert-float128-timode-2.i
-fp-int-convert-float128-timode-3.i
-fp-int-convert-float128-timode.i
 fp-int-convert-float80.i
 fp-int-convert-float80-timode.i
 fpreprocessed.i
@@ -355,7 +339,6 @@ pr47690.i
 pr47744-2.i
 pr47905.i
 pr48204.i
-pr48591.i
 pr48928.i
 pr51106-1.i
 pr51106-2.i

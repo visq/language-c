@@ -593,6 +593,8 @@ alloca-1.i
 alloca-2.i
 alloca-3.i
 alloca-4.i
+alloca-5.i
+alloca-6.i
 alpha-1.i
 always_inline2.i
 always_inline3.i
@@ -1462,6 +1464,8 @@ const-2.i
 const-3.i
 const-elim-1.i
 const-elim-2.i
+const-float128.i
+const-float128-ped.i
 constructor-1.i
 const-uniq_0.i
 const-uniq_1.i
@@ -1749,6 +1753,14 @@ float-range-2.i
 float-range-3.i
 float-range-4.i
 float-range-5.i
+float128-cmp-invalid.i
+float128-div-underflow.i
+float128-exact-underflow.i
+float128-extend-nan.i
+float128-extendxf-underflow.i
+float128-mul-underflow.i
+float128-truncdf-underflow.i
+float128-truncsf-underflow.i
 flush-1.i
 flush-2.i
 fnegate-1.i
@@ -1902,6 +1914,10 @@ forwprop-9.i
 fp-compare.i
 fp-int-convert-double.i
 fp-int-convert-float.i
+fp-int-convert-float128-timode-2.i
+fp-int-convert-float128-timode-3.i
+fp-int-convert-float128-timode.i
+fp-int-convert-float128.i
 fp-int-convert-long-double.i
 fp-int-convert-timode.i
 free-1.i
@@ -4360,6 +4376,7 @@ pr48524.i
 pr48542.i
 pr48552-1.i
 pr48552-2.i
+pr48591.i
 pr48616.i
 pr48622_0.i
 pr48685.i
