@@ -717,6 +717,7 @@ data CBuiltinThing a
   = CBuiltinVaArg (CExpression a) (CDeclaration a) a            -- ^ @(expr, type)@
   | CBuiltinOffsetOf (CDeclaration a) [CPartDesignator a] a -- ^ @(type, designator-list)@
   | CBuiltinTypesCompatible (CDeclaration a) (CDeclaration a) a  -- ^ @(type,type)@
+  | CBuiltinConvertVector (CExpression a) (CDeclaration a) a -- ^ @(expr, type)@
     deriving (Show, Data,Typeable {-! ,CNode ,Functor ,Annotated !-})
 
 
@@ -1327,6 +1328,7 @@ instance CNode t1 => CNode (CBuiltinThing t1) where
         nodeInfo (CBuiltinVaArg _ _ n) = nodeInfo n
         nodeInfo (CBuiltinOffsetOf _ _ n) = nodeInfo n
         nodeInfo (CBuiltinTypesCompatible _ _ n) = nodeInfo n
+        nodeInfo (CBuiltinConvertVector _ _ n) = nodeInfo n
 instance CNode t1 => Pos (CBuiltinThing t1) where
         posOf x = posOf (nodeInfo x)
 
@@ -1337,16 +1339,21 @@ instance Functor CBuiltinThing where
           = CBuiltinOffsetOf (fmap _f a1) (fmap (fmap _f) a2) (_f a3)
         fmap _f (CBuiltinTypesCompatible a1 a2 a3)
           = CBuiltinTypesCompatible (fmap _f a1) (fmap _f a2) (_f a3)
+        fmap _f (CBuiltinConvertVector a1 a2 a3)
+          = CBuiltinConvertVector (fmap _f a1) (fmap _f a2) (_f a3)
 
 instance Annotated CBuiltinThing where
         annotation (CBuiltinVaArg _ _ n) = n
         annotation (CBuiltinOffsetOf _ _ n) = n
         annotation (CBuiltinTypesCompatible _ _ n) = n
+        annotation (CBuiltinConvertVector _ _ n) = n
         amap f (CBuiltinVaArg a_1 a_2 a_3) = CBuiltinVaArg a_1 a_2 (f a_3)
         amap f (CBuiltinOffsetOf a_1 a_2 a_3)
           = CBuiltinOffsetOf a_1 a_2 (f a_3)
         amap f (CBuiltinTypesCompatible a_1 a_2 a_3)
           = CBuiltinTypesCompatible a_1 a_2 (f a_3)
+        amap f (CBuiltinConvertVector a_1 a_2 a_3) =
+          CBuiltinConvertVector a_1 a_2 (f a_3)
 
 instance CNode t1 => CNode (CConstant t1) where
         nodeInfo (CIntConst _ n) = nodeInfo n

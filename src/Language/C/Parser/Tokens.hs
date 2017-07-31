@@ -154,6 +154,7 @@ data GnuCTok = GnuCAttrTok              -- `__attribute__'
              | GnuCComplexImag          -- `__imag__'
 
 data ClangCTok = ClangCVersionTok !ClangCVersion -- version constant from 'availability' attribute
+               | ClangBuiltinConvertVector
 
 instance Pos CToken where
   posOf = fst . posLenOfTok
