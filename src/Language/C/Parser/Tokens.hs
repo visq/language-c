@@ -92,7 +92,7 @@ data CToken = CTokLParen   !PosLength            -- `('
             | CTokEnum     !PosLength            -- `enum'
             | CTokExtern   !PosLength            -- `extern'
             | CTokFloat    !PosLength            -- `float'
-            | CTokFloat128 !PosLength            -- `__float128'
+            | CTokFloat128 !PosLength            -- `__float128' or `_Float128`
             | CTokFor      !PosLength            -- `for'
             | CTokGeneric  !PosLength            -- `_Generic'
             | CTokGoto     !PosLength            -- `goto'
