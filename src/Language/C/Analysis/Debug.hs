@@ -26,6 +26,7 @@ import Language.C.Analysis.NameSpaceMap
 import Language.C.Data
 import Language.C.Pretty
 
+import Prelude hiding ((<>))
 import Text.PrettyPrint.HughesPJ
 import Data.Map (Map) ; import qualified Data.Map as Map
 
