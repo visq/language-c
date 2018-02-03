@@ -388,6 +388,7 @@ tNumType (NumTypeSpec basetype sgn sz iscomplex) =
         (BaseFloat, NoSignSpec, NoSizeMod)  -> floatType TyFloat
         (BaseDouble, NoSignSpec, NoSizeMod) -> floatType TyDouble
         (BaseDouble, NoSignSpec, LongMod)   -> floatType TyLDouble
+        (BaseFloat128, NoSignSpec, NoSizeMod) -> floatType TyFloat128
         -- TODO: error analysis
         (_,_,_)   -> error "Bad AST analysis"
     where
@@ -419,9 +420,9 @@ tTypeQuals = foldrM go (noTypeQuals,[]) where
 
 {-
 To canoicalize type specifiers, we define a canonical form:
-void | bool | (char|int|int128|float|double)? (signed|unsigned)? (long long?)? complex? | othertype
+void | bool | (char|int|int128|float|double|float128)? (signed|unsigned)? (long long?)? complex? | othertype
 -}
-data NumBaseType = NoBaseType | BaseChar | BaseInt | BaseInt128 | BaseFloat | BaseDouble deriving (Eq,Ord)
+data NumBaseType = NoBaseType | BaseChar | BaseInt | BaseInt128 | BaseFloat | BaseFloat128 | BaseDouble deriving (Eq,Ord)
 data SignSpec    = NoSignSpec | Signed | Unsigned deriving (Eq,Ord)
 data SizeMod     = NoSizeMod | ShortMod | LongMod | LongLongMod deriving (Eq,Ord)
 data NumTypeSpec = NumTypeSpec { base :: NumBaseType, signSpec :: SignSpec, sizeMod :: SizeMod, isComplex :: Bool  }
@@ -450,6 +451,8 @@ canonicalTypeSpec = foldrM go TSNone where
                             = return$  TSNum$ nts { base = BaseInt128 }
     go (CFloatType _)   tsa | (Just nts@(NumTypeSpec { base = NoBaseType })) <- getNTS tsa
                             = return$  TSNum$ nts { base = BaseFloat }
+    go (CFloat128Type _) tsa | (Just nts@(NumTypeSpec { base = NoBaseType })) <- getNTS tsa
+                            = return$  TSNum$ nts { base = BaseFloat128 }
     go (CDoubleType _)  tsa | (Just nts@(NumTypeSpec { base = NoBaseType })) <- getNTS tsa
                             = return$  TSNum$ nts { base = BaseDouble }
     go (CShortType _)   tsa | (Just nts@(NumTypeSpec { sizeMod = NoSizeMod })) <- getNTS tsa

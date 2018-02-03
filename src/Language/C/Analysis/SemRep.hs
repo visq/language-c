@@ -430,12 +430,14 @@ data FloatType =
       TyFloat
     | TyDouble
     | TyLDouble
+    | TyFloat128
     deriving (Typeable, Data, Eq, Ord)
 
 instance Show FloatType where
     show TyFloat = "float"
     show TyDouble = "double"
     show TyLDouble = "long double"
+    show TyFloat128 = "__float128"
 
 -- | composite type declarations
 data CompTypeRef = CompTypeRef SUERef CompTyKind NodeInfo

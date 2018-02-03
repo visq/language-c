@@ -126,6 +126,7 @@ exportFloatType ty =
       TyFloat   -> [CFloatType ni]
       TyDouble  -> [CDoubleType ni]
       TyLDouble -> [CLongType ni, CDoubleType ni]
+      TyFloat128 -> [CFloat128Type ni]
 
 exportComplexType :: FloatType -> [CTypeSpec]
 exportComplexType ty = (CComplexType ni) : exportFloatType ty
