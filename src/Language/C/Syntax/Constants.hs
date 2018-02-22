@@ -30,7 +30,9 @@ where
 import Data.Bits
 import Data.Char
 import Numeric (showOct, showHex, readHex, readOct, readDec)
-import Data.Generics
+import Data.Generics hiding (Generic)
+import GHC.Generics (Generic, Generic1)
+import Control.DeepSeq (NFData)
 
 -- | C char constants (abstract)
 data CChar = CChar
@@ -39,11 +41,13 @@ data CChar = CChar
            | CChars
               [Char] -- multi-character character constant
               !Bool   -- wide flag
-           deriving (Eq,Ord,Data,Typeable)
+           deriving (Eq,Ord,Data,Typeable,Generic)
 
 instance Show CChar where
     showsPrec _ (CChar c wideflag)   = _showWideFlag wideflag . showCharConst c
     showsPrec _ (CChars cs wideflag) = _showWideFlag wideflag . sQuote (concatMap escapeCChar cs)
+
+instance NFData CChar
 
 -- | @showCharConst c@ prepends _a_ String representing the C char constant corresponding to @c@.
 -- If necessary uses octal or hexadecimal escape sequences.
@@ -83,15 +87,20 @@ cChars :: String -> Bool -> CChar
 cChars = CChars
 
 -- | datatype for memorizing the representation of an integer
-data CIntRepr = DecRepr | HexRepr | OctalRepr deriving (Eq,Ord,Enum,Bounded,Data,Typeable)
+data CIntRepr = DecRepr | HexRepr | OctalRepr
+  deriving (Eq,Ord,Enum,Bounded,Data,Typeable,Generic)
+
+instance NFData CIntRepr
 
 -- | datatype representing type flags for integers
-data CIntFlag = FlagUnsigned | FlagLong | FlagLongLong | FlagImag deriving (Eq,Ord,Enum,Bounded,Data,Typeable)
+data CIntFlag = FlagUnsigned | FlagLong | FlagLongLong | FlagImag
+  deriving (Eq,Ord,Enum,Bounded,Data,Typeable,Generic)
 instance Show CIntFlag where
     show FlagUnsigned = "u"
     show FlagLong = "L"
     show FlagLongLong = "LL"
     show FlagImag = "i"
+instance NFData CIntFlag
 
 {-# SPECIALIZE setFlag :: CIntFlag -> Flags CIntFlag -> Flags CIntFlag #-}
 {-# SPECIALIZE clearFlag :: CIntFlag -> Flags CIntFlag -> Flags CIntFlag #-}
@@ -101,13 +110,14 @@ data CInteger = CInteger
                  !Integer
                  !CIntRepr
                  !(Flags CIntFlag)  -- integer flags
-                 deriving (Eq,Ord,Data,Typeable)
+                 deriving (Eq,Ord,Data,Typeable,Generic)
 instance Show CInteger where
     showsPrec _ (CInteger ig repr flags) = showInt ig . showString (concatMap showIFlag [FlagUnsigned .. ]) where
         showIFlag f = if testFlag f flags then show f else []
         showInt num = case repr of DecRepr -> shows num
                                    OctalRepr -> showString "0" . showOct num
                                    HexRepr -> showString "0x" . showHex num
+instance NFData CInteger
 
 -- To be used in the lexer
 -- Note that the flag lexer won't scale
@@ -142,9 +152,10 @@ cInteger i = CInteger i DecRepr noFlags
 -- | Floats (represented as strings)
 data CFloat = CFloat
                !String
-               deriving (Eq,Ord,Data,Typeable)
+               deriving (Eq,Ord,Data,Typeable,Generic)
 instance Show CFloat where
   showsPrec _ (CFloat internal) = showString internal
+instance NFData CFloat
 
 cFloat :: Float -> CFloat
 cFloat = CFloat . show
@@ -168,9 +179,10 @@ readClangCVersion = ClangCVersion
 data CString = CString
                 String    -- characters
                 Bool      -- wide flag
-                deriving (Eq,Ord,Data,Typeable)
+                deriving (Eq,Ord,Data,Typeable, Generic)
 instance Show CString where
     showsPrec _ (CString str wideflag) = _showWideFlag wideflag . showStringLit str
+instance NFData CString
 
 -- construction
 cString :: String -> CString
@@ -285,7 +297,8 @@ head' err []  = error err
 head' _ (x:_) = x
 
 -- TODO: Move to separate file ?
-newtype Flags f = Flags Integer deriving (Eq,Ord,Data,Typeable)
+newtype Flags f = Flags Integer deriving (Eq,Ord,Data,Typeable,Generic,Generic1)
+instance NFData (Flags f)
 noFlags :: Flags f
 noFlags = Flags 0
 setFlag :: (Enum f) => f -> Flags f -> Flags f

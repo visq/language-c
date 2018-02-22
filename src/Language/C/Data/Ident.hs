@@ -28,14 +28,18 @@ import Data.Char
 import Language.C.Data.Position
 import Language.C.Data.Node
 import Language.C.Data.Name (Name)
-import Data.Generics
+import Data.Generics hiding (Generic)
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
 
 -- | References uniquely determining a struct, union or enum type.
 -- Those are either identified by an string identifier, or by a unique
 -- name (anonymous types).
 data SUERef =  AnonymousRef Name
              | NamedRef Ident
-    deriving (Typeable, Data, Ord, Eq, Show) --, Read
+    deriving (Typeable, Data, Ord, Eq, Show, Generic) --, Read
+
+instance NFData SUERef
 
 -- | Return true if the struct\/union\/enum reference is anonymous.
 isAnonymousRef :: SUERef -> Bool
@@ -46,7 +50,9 @@ isAnonymousRef _ = False
 data Ident = Ident String       -- lexeme
                    {-# UNPACK #-}   !Int     -- hash to speed up equality check
                    NodeInfo                   -- attributes of this ident. incl. position
-             deriving (Data,Typeable,Show) -- Read
+             deriving (Data,Typeable,Show, Generic) -- Read
+
+instance NFData Ident
 
 -- the definition of the equality allows identifiers to be equal that are
 -- defined at different source text positions, and aims at speeding up the

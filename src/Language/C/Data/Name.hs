@@ -13,10 +13,15 @@ module Language.C.Data.Name (
 Name(..),newNameSupply, namesStartingFrom
 ) where
 import Data.Ix
-import Data.Generics
+import Data.Generics hiding (Generic)
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
 
 -- | Name is a unique identifier
-newtype Name = Name { nameId :: Int } deriving (Show, Read, Eq, Ord, Ix, Data, Typeable)
+newtype Name = Name { nameId :: Int }
+  deriving (Show, Read, Eq, Ord, Ix, Data, Typeable, Generic)
+
+instance NFData Name
 
 instance Enum Name where
     toEnum = Name

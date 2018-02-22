@@ -37,8 +37,9 @@ Flag allWarnings
     Description: Turn on all warnings for building (development)
     Default: False
 Library
-    Extensions: CPP, DeriveDataTypeable, PatternGuards, BangPatterns, ExistentialQuantification, GeneralizedNewtypeDeriving, ScopedTypeVariables
-    Build-Depends:  filepath
+    Extensions: CPP, DeriveDataTypeable, DeriveGeneric, PatternGuards, BangPatterns, ExistentialQuantification, GeneralizedNewtypeDeriving, ScopedTypeVariables
+    Build-Depends:  filepath,
+                    deepseq >= 1.4.0.0 && < 1.5
     if flag(allWarnings)
         if impl(ghc >= 8.0)
           ghc-options:     -Wall -Wno-redundant-constraints
@@ -61,6 +62,11 @@ Library
         Build-Depends: bytestring >= 0.9.0
     else
         cpp-options: -DNO_BYTESTRING
+
+     -- GHC.Generics lived in `ghc-prim` for GHC 7.2 & GHC 7.4
+    if impl(ghc == 7.4.*)
+        build-depends: ghc-prim == 0.2.*
+
     Build-Tools:    happy, alex
 
     Hs-Source-Dirs: src

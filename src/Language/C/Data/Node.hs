@@ -21,12 +21,16 @@ module Language.C.Data.Node (
 ) where
 import Language.C.Data.Position
 import Language.C.Data.Name     (Name)
-import Data.Generics
+import Data.Generics hiding (Generic)
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
 
 -- | Parsed entity attribute
 data NodeInfo = OnlyPos  Position {-# UNPACK #-} !PosLength        -- only pos and last token (for internal stuff only)
               | NodeInfo Position {-# UNPACK #-} !PosLength !Name  -- pos, last token and unique name
-           deriving (Data,Typeable,Eq,Ord)
+           deriving (Data,Typeable,Eq,Ord, Generic)
+
+instance NFData NodeInfo
 
 instance Show NodeInfo where
     showsPrec d (OnlyPos p l) =

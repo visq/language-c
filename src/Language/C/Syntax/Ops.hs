@@ -25,7 +25,9 @@ CUnaryOp(..),
 isEffectfulOp
 )
 where
-import Data.Generics
+import Data.Generics hiding (Generic)
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
 -- | C assignment operators (K&R A7.17)
 data CAssignOp = CAssignOp
                | CMulAssOp
@@ -38,7 +40,9 @@ data CAssignOp = CAssignOp
                | CAndAssOp
                | CXorAssOp
                | COrAssOp
-               deriving (Eq,Ord,Show,Data,Typeable)
+               deriving (Eq,Ord,Show,Data,Typeable,Generic)
+
+instance NFData CAssignOp
 
 assignBinop :: CAssignOp -> CBinaryOp
 assignBinop CAssignOp = error "direct assignment has no binary operator"
@@ -73,7 +77,9 @@ data CBinaryOp = CMulOp
                | COrOp                  -- ^ inclusive bitwise or
                | CLndOp                 -- ^ logical and
                | CLorOp                 -- ^ logical or
-               deriving (Eq,Ord,Show,Data,Typeable)
+               deriving (Eq,Ord,Show,Data,Typeable,Generic)
+
+instance NFData CBinaryOp
 
 isCmpOp :: CBinaryOp -> Bool
 isCmpOp op = op `elem` [ CLeqOp, CGeqOp, CLeOp, CGrOp, CEqOp, CNeqOp ]
@@ -99,7 +105,9 @@ data CUnaryOp = CPreIncOp               -- ^ prefix increment operator
               | CMinOp                  -- ^ prefix minus
               | CCompOp                 -- ^ one's complement
               | CNegOp                  -- ^ logical negation
-              deriving (Eq,Ord,Show,Data,Typeable)
+              deriving (Eq,Ord,Show,Data,Typeable,Generic)
+
+instance NFData CUnaryOp
 
 isEffectfulOp :: CUnaryOp -> Bool
 isEffectfulOp op = op `elem` [ CPreIncOp, CPreDecOp, CPostIncOp, CPostDecOp ]

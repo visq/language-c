@@ -27,13 +27,17 @@ module Language.C.Data.Position (
   incOffset,
   Pos(..),
 ) where
-import Data.Generics
+import Data.Generics hiding (Generic)
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
 
 -- | file position information
 data FilePosition = FilePosition { posSrcFile    :: String,            -- ^ source file
                                    posParentFile :: (Maybe Position)   -- ^ including file, if any
                                  }
-                    deriving (Eq, Ord, Typeable, Data)
+                    deriving (Eq, Ord, Typeable, Data, Generic)
+
+instance NFData FilePosition
 
 -- | uniform representation of source file positions
 data Position = Position { posOffset :: {-# UNPACK #-} !Int  -- ^ absolute offset in the preprocessed file
@@ -45,7 +49,9 @@ data Position = Position { posOffset :: {-# UNPACK #-} !Int  -- ^ absolute offse
               | NoPosition
               | BuiltinPosition
               | InternalPosition
-                deriving (Eq, Ord, Typeable, Data)
+                deriving (Eq, Ord, Typeable, Data, Generic)
+
+instance NFData Position
 
 posFile :: Position -> String
 posFile = posSrcFile . posFileInfo
