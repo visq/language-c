@@ -20,6 +20,7 @@ exportEnumType, exportEnumTypeDecl, exportEnumTypeRef,
 export,
 )
 where
+import           Data.Functor               ((<$>))
 import           Data.List
 import qualified Data.Map                   as Map
 import           Data.Maybe
