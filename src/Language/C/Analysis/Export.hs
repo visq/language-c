@@ -17,14 +17,65 @@ exportType, exportTypeDecl, exportTypeSpec,
 exportTypeDef,
 exportCompType, exportCompTypeDecl, exportCompTypeRef,
 exportEnumType, exportEnumTypeDecl, exportEnumTypeRef,
+export,
 )
 where
-import Language.C.Data.Ident
-import Language.C.Data.Name (nameId)
-import Language.C.Data.Node
-import Language.C.Syntax.AST
-import Language.C.Analysis.SemRep
-import Data.Maybe
+import           Data.List
+import qualified Data.Map                   as Map
+import           Data.Maybe
+import           Language.C.Analysis.SemRep
+import           Language.C.Data.Ident
+import           Language.C.Data.Name       (nameId)
+import           Language.C.Data.Node
+import           Language.C.Syntax.AST
+
+
+-- | Export global declarations
+-- TODO: This does not export tags and type defs yet
+export :: GlobalDecls -> CTranslUnit
+export (GlobalDecls objs tags typedefs) = CTranslUnit (declarations ++ []) undefNode
+  where declarations = fmap exportIdentDecl (filterBuiltins $ Map.toList objs)
+        filterBuiltins = Prelude.filter noBuiltIns
+        noBuiltIns (idn, _) = let n = identToString idn
+                              in not ("__builtin" `isPrefixOf` n) &&
+                                  (n /= "__FUNCTION__") &&
+                                  (n /= "__PRETTY_FUNCTION__") &&
+                                  (n /= "__func__" )
+
+
+exportIdentDecl :: (Ident, IdentDecl) -> CExternalDeclaration NodeInfo
+exportIdentDecl (_, Declaration decl)   = CDeclExt $ exportDeclaration decl
+exportIdentDecl (_, FunctionDef fundef) = CFDefExt $ exportFunDef fundef
+exportIdentDecl (_, ObjectDef objdef)   = CDeclExt $ exportObject objdef
+exportIdentDecl (_, EnumeratorDef _)    = error "not implemented: enumerator definition"
+
+exportObject :: ObjDef -> CDeclaration NodeInfo
+exportObject d@(ObjDef _ mInit nInf) = CDecl specs' [(Just decl, mInit, Nothing)] nInf
+  where
+    (DeclAttrs _ _ attrs) = declAttrs d
+    specs                 = exportDeclarationSpecifiers (declAttrs d)
+    (specs', decl)        = exportDeclr specs (declType d) attrs (declName d)
+
+
+exportDeclaration :: Decl -> CDeclaration NodeInfo
+exportDeclaration d = CDecl specs' [(Just decl, Nothing, Nothing)] undefNode
+  where
+    (DeclAttrs _ _ attrs) = declAttrs d
+    specs                 = exportDeclarationSpecifiers (declAttrs d)
+    (specs', decl)        = exportDeclr specs (declType d) attrs (declName d)
+
+
+exportFunDef :: FunDef  -> CFunctionDef NodeInfo
+exportFunDef d@(FunDef _ stmt _) = CFunDef cDeclSpecs cDecl oldStyleParams stmt undefNode
+  where
+    (cDeclSpecs, cDecl) = exportDeclr specs (declType d) ([] :: Attributes) (declName d)
+    oldStyleParams= [] :: [CDeclaration NodeInfo] -- TODO:?
+    specs = exportDeclarationSpecifiers (declAttrs d):: [CDeclarationSpecifier NodeInfo]
+
+exportDeclarationSpecifiers :: DeclAttrs -> [CDeclarationSpecifier NodeInfo]
+exportDeclarationSpecifiers (DeclAttrs funcAttrs storage attrs ) = specifiers
+  where specifiers = (CFunSpec <$> exportFunAttrs funcAttrs) ++ (CStorageSpec <$> exportStorage storage)
+
 
 -- |Export Declarator
 --
@@ -87,20 +138,20 @@ exportTypeQualsAttrs :: TypeQuals -> Attributes -> [CTypeQual]
 exportTypeQualsAttrs tyqs attrs = (exportTypeQuals tyqs ++ map CAttrQual (exportAttrs attrs))
 
 exportArraySize :: ArraySize -> CArrSize
-exportArraySize (ArraySize static e) = CArrSize static e
+exportArraySize (ArraySize static e)        = CArrSize static e
 exportArraySize (UnknownArraySize complete) = CNoArrSize complete
 
 exportTypeSpec :: TypeName -> [CTypeSpec]
 exportTypeSpec tyname =
     case tyname of
-        TyVoid -> [CVoidType ni]
-        TyIntegral ity -> exportIntType ity
-        TyFloating fty -> exportFloatType fty
-        TyComplex fty -> exportComplexType fty
-        TyComp comp -> exportCompTypeDecl comp
-        TyEnum enum -> exportEnumTypeDecl enum
+        TyVoid             -> [CVoidType ni]
+        TyIntegral ity     -> exportIntType ity
+        TyFloating fty     -> exportFloatType fty
+        TyComplex fty      -> exportComplexType fty
+        TyComp comp        -> exportCompTypeDecl comp
+        TyEnum enum        -> exportEnumTypeDecl enum
         TyBuiltin TyVaList -> [CTypeDef (internalIdent "va_list") ni]
-        TyBuiltin TyAny -> [CTypeDef (internalIdent "__ty_any") ni]
+        TyBuiltin TyAny    -> [CTypeDef (internalIdent "__ty_any") ni]
 
 exportIntType :: IntType -> [CTypeSpec]
 exportIntType ty =
@@ -123,9 +174,9 @@ exportIntType ty =
 exportFloatType :: FloatType -> [CTypeSpec]
 exportFloatType ty =
     case ty of
-      TyFloat   -> [CFloatType ni]
-      TyDouble  -> [CDoubleType ni]
-      TyLDouble -> [CLongType ni, CDoubleType ni]
+      TyFloat    -> [CFloatType ni]
+      TyDouble   -> [CDoubleType ni]
+      TyLDouble  -> [CLongType ni, CDoubleType ni]
       TyFloat128 -> [CFloat128Type ni]
 
 exportComplexType :: FloatType -> [CTypeSpec]
@@ -218,16 +269,16 @@ exportStorage (FunLinkage NoLinkage) = error "impossible storage: function witho
 
 threadLocal :: Bool -> [CStorageSpec] -> [CStorageSpec]
 threadLocal False = id
-threadLocal True = ((CThread ni) :)
+threadLocal True  = ((CThread ni) :)
 
 exportAttrs :: [Attr] -> [CAttr]
 exportAttrs = map exportAttr where
     exportAttr (Attr ident es n) = CAttr ident es n
 
 fromDirectType :: Type -> TypeName
-fromDirectType (DirectType ty _ _) = ty
+fromDirectType (DirectType ty _ _)                   = ty
 fromDirectType (TypeDefType (TypeDefRef _ ty _) _ _) = fromDirectType ty
-fromDirectType _ = error "fromDirectType"
+fromDirectType _                                     = error "fromDirectType"
 
 ni :: NodeInfo
 ni = undefNode
