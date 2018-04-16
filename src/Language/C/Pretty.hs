@@ -442,7 +442,7 @@ instance Pretty CExpr where
     prettyPrec _p (CCompoundLit decl initl _) =
         parens (pretty decl) <+> (braces . hsep . punctuate comma) (map p initl) where
         p ([], initializer)           = pretty initializer
-        p (mems, initializer) = hcat (punctuate (text ".") (map pretty mems)) <+> text "=" <+> pretty initializer
+        p (mems, initializer) = hcat (map pretty mems) <+> text "=" <+> pretty initializer
 
     prettyPrec _p (CStatExpr stat _) =
         text "(" <> pretty stat <> text ")"
