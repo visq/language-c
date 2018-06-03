@@ -164,6 +164,10 @@ $white+         ;
 --
 \#$space*ident.*$eol    ;
 
+-- special token to deal with C11 _Atomic followed by opening parenthesis (which belongs to a different
+-- syntactic category than _Atomic not followed by parenthesis :( )
+"_Atomic" ($space|$eol)* "(" { \pos len str -> tok 8 CTokAtomicLParen pos }
+
 -- identifiers and keywords (follows K&R A2.3 and A2.4)
 --
 $identletter($identletter|$digit)*  { \pos len str -> idkwtok (takeChars len str) pos }
@@ -286,7 +290,7 @@ default, do, double,
 else, enum, extern,
 float, for,
 generic _Generic, goto,
-if, inline @__, int, int128 __int128, long,
+if, inline @__, int, int128 __int128 __int128_t, long,
 noreturn _Noreturn, _Nonnull __nonnull, _Nullable __nullable,
 register, restrict @__, return
 short, signed @__, sizeof, static, staticAssert _Static_assert, struct, switch,
@@ -309,7 +313,7 @@ label __label__
 (CTokGnuC GnuCTyCompat) __builtin_types_compatible_p
 (CTokClangC ClangBuiltinConvertVector) __builtin_convertvector
 -}
--- Tokens: _Alignas _Alignof __alignof alignof __alignof__ __asm asm __asm__ _Atomic auto break _Bool case char __const const __const__ continue _Complex __complex__ default do double else enum extern float for _Generic goto if __inline inline __inline__ int __int128 long _Noreturn __nullable __nonnull register __restrict restrict __restrict__ return short __signed signed __signed__ sizeof static _Static_assert struct switch typedef __typeof typeof __typeof__ __thread _Thread_local union unsigned void __volatile volatile __volatile__ while __label__ _Float32 _Float32x _Float64 _Float64x _Float128 __float128 _Float128x __attribute __attribute__ __extension__ __real __real__ __imag __imag__ __builtin_va_arg __builtin_offsetof __builtin_types_compatible_p __builtin_convertvector
+-- Tokens: _Alignas _Alignof __alignof alignof __alignof__ __asm asm __asm__ _Atomic auto break _Bool case char __const const __const__ continue _Complex __complex__ default do double else enum extern float for _Generic goto if __inline inline __inline__ int __int128 __int128_t long _Noreturn __nullable __nonnull register __restrict restrict __restrict__ return short __signed signed __signed__ sizeof static _Static_assert struct switch typedef __typeof typeof __typeof__ __thread _Thread_local union unsigned void __volatile volatile __volatile__ while __label__ _Float32 _Float32x _Float64 _Float64x _Float128 __float128 _Float128x __attribute __attribute__ __extension__ __real __real__ __imag __imag__ __builtin_va_arg __builtin_offsetof __builtin_types_compatible_p __builtin_convertvector
 idkwtok ('_' : 'A' : 'l' : 'i' : 'g' : 'n' : 'a' : 's' : []) = tok 8 CTokAlignas
 idkwtok ('_' : 'A' : 'l' : 'i' : 'g' : 'n' : 'o' : 'f' : []) = tok 8 CTokAlignof
 idkwtok ('_' : 'A' : 't' : 'o' : 'm' : 'i' : 'c' : []) = tok 7 CTokAtomic
@@ -359,6 +363,7 @@ idkwtok ('i' : 'n' : 'l' : 'i' : 'n' : 'e' : []) = tok 6 CTokInline
 idkwtok ('_' : '_' : 'i' : 'n' : 'l' : 'i' : 'n' : 'e' : '_' : '_' : []) = tok 10 CTokInline
 idkwtok ('i' : 'n' : 't' : []) = tok 3 CTokInt
 idkwtok ('_' : '_' : 'i' : 'n' : 't' : '1' : '2' : '8' : []) = tok 8 CTokInt128
+idkwtok ('_' : '_' : 'i' : 'n' : 't' : '1' : '2' : '8' : '_' : 't' : []) = tok 10 CTokInt128
 idkwtok ('_' : '_' : 'l' : 'a' : 'b' : 'e' : 'l' : '_' : '_' : []) = tok 9 CTokLabel
 idkwtok ('l' : 'o' : 'n' : 'g' : []) = tok 4 CTokLong
 idkwtok ('_' : '_' : 'n' : 'o' : 'n' : 'n' : 'u' : 'l' : 'l' : []) = tok 9 CTokNonnull

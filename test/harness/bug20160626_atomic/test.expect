@@ -1,0 +1,30 @@
+_Atomic int a1;
+int unsigned _Atomic a2;
+inline volatile _Atomic int a3(void)
+{
+}
+inline _Noreturn __attribute__((unused)) _Atomic int * a4(void)
+{
+}
+inline _Noreturn _Atomic __attribute__((unused)) int * a5(void)
+{
+}
+extern _Atomic int b1;
+int unsigned _Atomic extern b2;
+static inline volatile _Atomic int b3(void)
+{
+}
+static inline _Noreturn __attribute__((unused)) _Atomic int * b4(void);
+inline extern _Noreturn _Atomic __attribute__((unused)) int * b5(void)
+{
+}
+_Atomic(int) x1;
+inline volatile _Atomic(int) x2(void)
+{
+}
+inline _Noreturn __attribute__((unused)) _Atomic(int) x3(void)
+{
+}
+extern _Atomic(int) x1a;
+static volatile _Atomic(int) x2a;
+static volatile __attribute__((unused)) _Atomic(unsigned long long) x3a;

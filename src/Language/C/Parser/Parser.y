@@ -185,6 +185,7 @@ import Language.C.Syntax
 alignof		{ CTokAlignof	_ }
 alignas         { CTokAlignas   _ }
 "_Atomic"       { CTokAtomic    _ }
+"_Atomic("      { CTokAtomicLParen  _ }
 asm		{ CTokAsm	_ }
 auto		{ CTokAuto	_ }
 break		{ CTokBreak	_ }
@@ -776,7 +777,6 @@ declaration_specifier
   | sue_declaration_specifier		{ reverse $1 }	-- Struct/Union/Enum
   | typedef_declaration_specifier	{ reverse $1 }	-- Typedef
 
-
 -- A mixture of type qualifiers (const, volatile, restrict, _Atomic, _Nonnull, _Nullable),
 -- function specifiers (inline, _Noreturn),
 -- alignment specifiers (_Alignas) and
@@ -855,16 +855,13 @@ alignment_specifier
 -- This recignises a whole list of type specifiers rather than just one
 -- as in the C99 grammar.
 --
--- type_specifier :- <permute> type_qualifier* (basic_type_name+ | elaborated_type_name | g)
+-- type_specifier :- <permute> type_qualifier* type_name+
 --
--- Type specifier _Atomic(type) is not yet supported because of conflicts with type qualifier _Atomic
 type_specifier :: { [CDeclSpec] }
 type_specifier
   : basic_type_specifier		{ reverse $1 }	-- Arithmetic or void
   | sue_type_specifier			{ reverse $1 }	-- Struct/Union/Enum
-  | typedef_type_specifier		{ reverse $1 }	-- Typedef
---  | "_Atomic" '(' type_name ')'                         -- _Atomic(type)
---        {% withNodeInfo $1 $ \at -> [CTypeSpec (CAtomicType $3 at)] }
+  | typedef_type_specifier		{ reverse $1 }	-- Typedef, typeof(...), _Atomic(...)
 
 basic_type_name :: { CTypeSpec }
 basic_type_name
@@ -887,7 +884,6 @@ basic_type_name
   | "_Float128"                 {% withNodeInfo $1 $ (CFloatNType 128 False) }
   | "_Float128x"                {% withNodeInfo $1 $ (CFloatNType 128 True) }
   | "__float128"                {% withNodeInfo $1 $ (CFloatNType 128 False) }
-
 
 
 -- A mixture of type qualifiers, storage class and basic type names in any
@@ -1007,7 +1003,7 @@ sue_type_specifier
 --   typedef_declaration_specifier :- <permute> type_qualifier* storage_class+ tyident
 --
 -- * Note:
---   the tyident can also be a: typeof '(' ... ')'
+--   the tyident can also be a: typeof '(' ... ')' or "_Atomic(" ... ')'
 --
 typedef_declaration_specifier :: { Reversed [CDeclSpec] }
 typedef_declaration_specifier
@@ -1023,6 +1019,9 @@ typedef_declaration_specifier
   | declaration_qualifier_list typeof '(' type_name ')'
   	{% withNodeInfo $2 $ \at -> $1 `snoc` CTypeSpec (CTypeOfType $4 at) }
 
+  | declaration_qualifier_list "_Atomic(" type_name ')'
+        {% withNodeInfo $2 $ \at -> $1 `snoc` CTypeSpec (CAtomicType $3 at) }
+
   | typedef_declaration_specifier declaration_qualifier
   	{ $1 `snoc` $2 }
 
@@ -1033,7 +1032,7 @@ typedef_declaration_specifier
 -- typedef'ed type identifier with optional leading and trailing type qualifiers
 --
 -- * Summary:
---   type_qualifier* ( tyident | typeof '('...')' ) type_qualifier*
+--   type_qualifier* ( tyident | typeof '('...')' | "_Atomic(" ... ')' ) type_qualifier*
 --
 typedef_type_specifier :: { Reversed [CDeclSpec] }
 typedef_type_specifier
@@ -1046,6 +1045,9 @@ typedef_type_specifier
   | typeof '(' type_name ')'
   	{% withNodeInfo $1 $ \at -> singleton (CTypeSpec (CTypeOfType $3 at)) }
 
+  | "_Atomic(" type_name ')'
+        {% withNodeInfo $1$ \at -> singleton (CTypeSpec (CAtomicType $2 at)) }
+
   | type_qualifier_list tyident
   	{% withNodeInfo $2 $ \at -> rmap CTypeQual  $1 `snoc` CTypeSpec (CTypeDef $2 at) }
 
@@ -1054,6 +1056,9 @@ typedef_type_specifier
 
   | type_qualifier_list typeof '(' type_name ')'
   	{% withNodeInfo $2 $ \at -> rmap CTypeQual  $1 `snoc` CTypeSpec (CTypeOfType $4 at) }
+
+  | type_qualifier_list  "_Atomic(" type_name ')'
+        {% withNodeInfo $2$ \at -> rmap CTypeQual $1 `snoc`  CTypeSpec (CAtomicType $3 at) }
 
   -- repeat with attrs (this could be easier if type qualifier list wouldn't allow leading attributes)
   | attrs tyident
@@ -1073,6 +1078,9 @@ typedef_type_specifier
 
   | type_qualifier_list attrs typeof '(' type_name ')'
   	{% withNodeInfo $3 $ \at -> rmap CTypeQual  $1 `rappend` (liftCAttrs $2) `snoc` CTypeSpec (CTypeOfType $5 at) }
+
+  | type_qualifier_list attrs  "_Atomic(" type_name ')'
+        {% withNodeInfo $3$ \at  -> rmap CTypeQual $1 `rappend` (liftCAttrs $2) `snoc`  CTypeSpec (CAtomicType $4 at) }
 
   | typedef_type_specifier type_qualifier
   	{ $1 `snoc` CTypeQual $2 }

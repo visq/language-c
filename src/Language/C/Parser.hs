@@ -18,13 +18,16 @@ module Language.C.Parser (
     -- * Exposed Parsers
     translUnitP, extDeclP, statementP, expressionP,
     -- * Parser Monad
-    ParseError(..)
+    ParseError(..),
+    -- * Lexer interface
+    lexC, CToken(..)
 )
 where
 import Language.C.Parser.Parser (parseC,translUnitP, extDeclP, statementP, expressionP)
 import Language.C.Parser.ParserMonad (execParser, ParseError(..),P)
 import Language.C.Parser.Builtin (builtinTypeNames)
-
+import Language.C.Parser.Lexer (lexC)
+import Language.C.Parser.Tokens (CToken(..))
 import Language.C.Data
 
 -- | run the given parser using a new name supply and builtin typedefs

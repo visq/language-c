@@ -1,0 +1,17 @@
+Known issues concerning C11
+===========================
+
+_Atomic:
+  In order to support both _Atomic type qualifier and _Atomic (<type>) type with happy, the lexer recognizes
+  _Atomic( as a special token. This only works if no #pragma, #line or the like is between _Atomic and (.
+  Note that comments are not an issue, because language-c expects preprocessed input.
+
+Known issues concerning GNU extensions
+======================================
+
+IEC 60559:
+  Since language-c-0.8, extended floating point types are supported (gcc 7 feature). Package maintainers may decide to disable these types (flag iecFpExtension) to work around the fact that the _Float128 type is redefined by glibc >= 2.26 if gcc < 7 is used for preprocessing:
+  /* The type _Float128 exists only since GCC 7.0.  */
+  # if !__GNUC_PREREQ (7, 0) || defined __cplusplus
+  typedef __float128 _Float128;
+  # endif

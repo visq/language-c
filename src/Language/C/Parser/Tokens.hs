@@ -76,6 +76,7 @@ data CToken = CTokLParen   !PosLength            -- `('
                                                 -- (or `__asm',
                                                 -- `__asm__')
             | CTokAtomic   !PosLength            -- `_Atomic'
+            | CTokAtomicLParen !PosLength        -- `_Atomic('
             | CTokAuto     !PosLength            -- `auto'
             | CTokBreak    !PosLength            -- `break'
             | CTokBool     !PosLength            -- `_Bool'
@@ -211,6 +212,7 @@ posLenOfTok (CTokAlignof  pos  ) = pos
 posLenOfTok (CTokAlignas  pos  ) = pos
 posLenOfTok (CTokAsm      pos  ) = pos
 posLenOfTok (CTokAtomic   pos  ) = pos
+posLenOfTok (CTokAtomicLParen  pos  ) = pos
 posLenOfTok (CTokAuto     pos  ) = pos
 posLenOfTok (CTokBreak    pos  ) = pos
 posLenOfTok (CTokBool     pos  ) = pos
@@ -318,6 +320,7 @@ instance Show CToken where
   showsPrec _ (CTokAlignas  _  ) = showString "_Alignas"
   showsPrec _ (CTokAsm      _  ) = showString "asm"
   showsPrec _ (CTokAtomic      _  ) = showString "_Atomic"
+  showsPrec _ (CTokAtomicLParen _ ) = showString "_Atomic("
   showsPrec _ (CTokAuto     _  ) = showString "auto"
   showsPrec _ (CTokBool _)       = showString "_Bool"
   showsPrec _ (CTokBreak    _  ) = showString "break"

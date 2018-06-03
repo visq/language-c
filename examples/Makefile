@@ -1,5 +1,5 @@
 # Build examples
-BINARIES=ParseAndPrint ScanFile SearchDef TypeCheck ComputeSize DumpAst
+BINARIES=ParseAndPrint ScanFile SearchDef TypeCheck ComputeSize DumpAst PrintTokens
 
 PROJECT_DIR=..
 BIN_DIR=.

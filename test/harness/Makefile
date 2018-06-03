@@ -10,6 +10,7 @@ TESTS=analysis_enum \
       bug20160314_noreturn \
       bug20160729_C_include_stack \
       bug20160911_builtin_bswap \
+      iec_60559 \
       parse_dg
 
 #bug20140111_utf8

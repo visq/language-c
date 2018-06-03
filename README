@@ -34,18 +34,7 @@ Currently unsupported C11 constructs:
 Currently unsupported GNU C extensions:
  - __auto_type
  - __builtin_offsetof
-   char a[__builtin_offsetof (struct S, sa->f)
- - _Decimal32
- - Extended assembler
-   __asm__ __volatile__ ("" : : : );
-   __asm__ goto ("" : : : : label);
-
-IEC 60559:
-  Since language-c-0.8, extended floating point types are supported (gcc 7 feature). Package maintainers may decide to disable these types (flag iecFpExtension) to work around the fact that the _Float128 type is redefined by glibc >= 2.26 if gcc < 7 is used for preprocessing:
-  /* The type _Float128 exists only since GCC 7.0.  */
-  # if !__GNUC_PREREQ (7, 0) || defined __cplusplus
-  typedef __float128 _Float128;
-  # endif
+ - Unicode strings u8"", u""
 
 == Sources ==
 

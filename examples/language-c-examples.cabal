@@ -39,3 +39,6 @@ Executable DumpAst
    main-is: DumpAst.hs
    build-depends: base, filepath, mtl, pretty, language-c
 
+Executable PrintTokens
+   main-is: PrintTokens.hs
+   build-depends: base, filepath, mtl, pretty, language-c
