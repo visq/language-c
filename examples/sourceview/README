@@ -1,6 +1,13 @@
 = Prototype Status =
 
-needs gtk2hs (tested with 0.9.13) and language-c (>= 0.3.2 from darcs)
+Dependencies
+------------
+  gtk            (tested with 0.9.13, 0.14.9)
+  gtksourceview2 (tested with ?,      0.13.3.1)
+  language-c     (tested with 0.3.2,  0.8.0)
+  
+Build&Run
+---------
 > ghc --make -O SourceView.hs
 > gcc -E example.c > example.i
 > ./SourceView example.i

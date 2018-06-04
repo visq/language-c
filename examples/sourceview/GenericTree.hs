@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances  #-}
+{-# LANGUAGE Rank2Types, ScopedTypeVariables, FlexibleInstances, ExistentialQuantification  #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  GenericTree
@@ -17,16 +17,16 @@ import Language.C.Syntax.AST
 import Data.Tree
 import Data.Typeable
 import Data.Maybe
-
+data CastT = CastT { castTo :: forall a. (Typeable a) => (a -> (Maybe a)) }
 data AstNode =
-      AstNode String (TypeRep, forall a. (Typeable a) => a -> (Maybe a)) (Maybe NodeInfo)
+      AstNode String (TypeRep, CastT) (Maybe NodeInfo)
+    | InfoNode String
     | ListNode String
     | ConstNode CConst
     | IdentNode Ident
-    | InfoNode String
 
-dynRep :: (Typeable a) => a -> (TypeRep, forall b. (Typeable b) => b -> (Maybe b))
-dynRep a = (typeOf a, \_ -> cast a)
+dynRep :: (Typeable a) => a -> (TypeRep, CastT)
+dynRep a = (typeOf a, CastT (\_ -> cast a))
 
 leaf :: AstNode -> Tree AstNode
 leaf n = Node n []

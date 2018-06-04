@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternSignatures, RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables, RankNTypes #-}
 -- Example demonstrating how link the AST back to the source code,
 -- using a simple heuristic
 module Main where
