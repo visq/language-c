@@ -246,7 +246,6 @@ escapeChar :: Char -> String
 escapeChar '\\' = "\\\\"
 escapeChar '\a' = "\\a"
 escapeChar '\b' = "\\b"
-escapeChar '\ESC' = "\\e";
 escapeChar '\f' = "\\f"
 escapeChar '\n' = "\\n"
 escapeChar '\r' = "\\r"
