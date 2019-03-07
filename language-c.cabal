@@ -45,6 +45,7 @@ Library
                    deepseq >= 1.4.0.0 && < 1.5,
                    directory,
                    filepath,
+                   mtl,
                    pretty < 1.2.0,
                    process
     if flag(allWarnings)
