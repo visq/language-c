@@ -39,6 +39,9 @@ import System.Environment
 import System.FilePath (combine)
 import System.IO
 import Text.PrettyPrint
+#if (MIN_VERSION_base(4, 11, 0))
+import Prelude hiding ((<>))
+#endif
 
 -- | Takes a list of additional environment variable descriptions, and produces a document providing help
 --   on the influental environment variables.
