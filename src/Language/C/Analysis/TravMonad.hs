@@ -69,6 +69,7 @@ import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
 import Control.Monad.Identity
 import Control.Monad.State.Class
+import Control.Monad.Trans
 import Prelude hiding (lookup)
 
 class (Monad m) => MonadName m where
@@ -381,13 +382,13 @@ warn err = recordError (changeErrorLevel err LevelWarn)
 -- * The Trav datatype
 
 -- | simple traversal monad, providing user state and callbacks
-newtype TravT m s a = TravT { unTravT :: TravState m s -> m (Either CError (a, TravState m s)) }
+newtype TravT s m a = TravT { unTravT :: TravState m s -> m (Either CError (a, TravState m s)) }
 
-instance Monad m => MonadState (TravState m s) (TravT m s) where
+instance Monad m => MonadState (TravState m s) (TravT s m) where
     get      = TravT (\s -> return (Right (s,s)))
     put s    = TravT (\_ -> return (Right ((),s)))
 
-runTravT :: forall m s a. Monad m => s -> TravT m s a -> m (Either [CError] (a, TravState m s))
+runTravT :: forall m s a. Monad m => s -> TravT s m a -> m (Either [CError] (a, TravState m s))
 runTravT state traversal =
     unTravT action (initTravState state) >>= \x -> return $ case x of
         Left trav_err                                 -> Left [trav_err]
@@ -406,29 +407,35 @@ runTrav_ t = fmap fst . runTrav () $
        es <- getErrors
        return (r,es)
 
-withExtDeclHandler :: Monad m => TravT m s a -> (DeclEvent -> TravT m s ()) -> TravT m s a
+withExtDeclHandler :: Monad m => TravT s m a -> (DeclEvent -> TravT s m ()) -> TravT s m a
 withExtDeclHandler action handler =
     do modify $ \st -> st { doHandleExtDecl = handler }
        action
 
-instance Monad f => Functor (TravT f s) where
+instance Monad f => Functor (TravT s f) where
     fmap = liftM
 
-instance Monad f => Applicative (TravT f s) where
+instance Monad f => Applicative (TravT s f) where
     pure  = return
     (<*>) = ap
 
-instance Monad m => Monad (TravT m s) where
+instance Monad m => Monad (TravT s m) where
     return x  = TravT (\s -> return (Right (x,s)))
     m >>= k   = TravT (\s -> unTravT m s >>= \y -> case y of
                               Right (x,s1) -> unTravT (k x) s1
                               Left e       -> return (Left e))
 
-instance Monad m => MonadName (TravT m s) where
+instance MonadTrans (TravT s) where
+    lift m = TravT (\s -> (\x -> Right (x, s)) <$> m)
+
+instance MonadIO m => MonadIO (TravT s m) where
+    liftIO = lift . liftIO
+
+instance Monad m => MonadName (TravT s m) where
     -- unique name generation
     genName = generateName
 
-instance Monad m => MonadSymtab (TravT m s) where
+instance Monad m => MonadSymtab (TravT s m) where
     -- symbol table handling
     getDefTable = gets symbolTable
     withDefTable f = do
@@ -437,7 +444,7 @@ instance Monad m => MonadSymtab (TravT m s) where
         put $ ts { symbolTable = symt' }
         return r
 
-instance Monad m => MonadCError (TravT m s) where
+instance Monad m => MonadCError (TravT s m) where
     -- error handling facilities
     throwTravError e = TravT (\_ -> return (Left (toError e)))
     catchTravError a handler = TravT (\s -> unTravT a s >>= \x -> case x of
@@ -446,13 +453,13 @@ instance Monad m => MonadCError (TravT m s) where
     recordError e = modify $ \st -> st { rerrors = (rerrors st) `snoc` toError e }
     getErrors = gets (RList.reverse . rerrors)
 
-instance Monad m => MonadTrav (TravT m s) where
+instance Monad m => MonadTrav (TravT s m) where
     -- handling declarations and definitions
     handleDecl d = ($ d) =<< gets doHandleExtDecl
 
-type Trav s a = TravT Identity s a
+type Trav s a = TravT s Identity a
 
-unTrav :: Trav s a -> TravT Identity s a
+unTrav :: Trav s a -> TravT s Identity a
 unTrav = id
 
 -- | The variety of the C language to accept. Note: this is not yet enforced.
@@ -468,7 +475,7 @@ data TravState m s =
         symbolTable :: DefTable,
         rerrors :: RList CError,
         nameGenerator :: [Name],
-        doHandleExtDecl :: (DeclEvent -> TravT m s ()),
+        doHandleExtDecl :: (DeclEvent -> TravT s m ()),
         userState :: s,
         options :: TravOptions
       }
@@ -497,7 +504,7 @@ getUserState = userState `liftM` get
 modifyOptions :: (TravOptions -> TravOptions) -> Trav s ()
 modifyOptions f = modify $ \ts -> ts { options = f (options ts) }
 
-generateName :: Monad m => TravT m s Name
+generateName :: Monad m => TravT s m Name
 generateName =
     get >>= \ts ->
     do let (new_name : gen') = nameGenerator ts
