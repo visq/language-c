@@ -5,6 +5,7 @@ import System.Environment
 import Language.C
 import Language.C.System.GCC
 import Text.Printf
+import Text.PrettyPrint  as PP
 import Text.PrettyPrint.HughesPJ
 --import Here (here) 
 main = do
@@ -33,7 +34,7 @@ stat_embed k stat = braces $ nest 2 $
     iterclose
  where
     stmt =  pretty stat
-    decls = vcat $ map (\n -> text "int" <+> text(guardName n) <> semi) [1..k]
+    decls = vcat $ map (\n -> text "int" <+> text(guardName n) PP.<> semi) [1..k]
     iteropen = vcat $ map (\n -> let gn = guardName n in text (printf "for(%s=0;%s<=1;%s++){" gn gn gn)) [1..k]
     iterclose = vcat $ replicate k (char '}')
 
