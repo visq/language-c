@@ -254,6 +254,11 @@ tyident		{ CTokTyIdent _ $$ }		-- `typedef-name' identifier
 "__builtin_types_compatible_p"	{ CTokGnuC GnuCTyCompat _ }
 "__builtin_convertvector"	{ CTokClangC _ ClangBuiltinConvertVector }
 clangcversion   { CTokClangC _ (ClangCVersionTok $$) } -- Clang version literal
+"__kernel"	{ CTokClKernel	_ }             -- OpenCL kernel function
+"__read_only"	{ CTokClRdOnly	_ }             -- OpenCL read only qualifier
+"__write_only"	{ CTokClWrOnly	_ }             -- OpenCL write only qualifier
+"__global"	{ CTokClGlobal	_ }             -- OpenCL global variable
+"__local"	{ CTokClLocal	_ }             -- OpenCL local variable
 
 %%
 
@@ -566,11 +571,11 @@ To allow a lightweight notation, we will use the modifier <permute> to indicate 
 -- storage class and type qualifier
 ---------------------------------------------------------------------------------------------------------------
 attr                       :-   __attribute__((..))
-storage_class              :-   typedef | extern | static | auto | register | _Thread_local
+storage_class              :-   typedef | extern | static | auto | register | _Thread_local | __kernel | __global | __local
 function_specifier         :-   inline | _Noreturn
 alignment_specifier        :-   _Alignas (type_name) | _Alignas (constant_expr)
 
-type_qualifier             :-   const | volatile | restrict | _Atomic | _Nullable | _Nonnull
+type_qualifier             :-   const | volatile | restrict | _Atomic | _Nullable | _Nonnull | __read_only | __write_only
 type_qualifier_list        :-   type_qualifier+
 
 declaration_qualifier      :-   storage_class | type_qualifier | function_specifier | alginment_specifier
@@ -777,10 +782,10 @@ declaration_specifier
   | typedef_declaration_specifier	{ reverse $1 }	-- Typedef
 
 
--- A mixture of type qualifiers (const, volatile, restrict, _Atomic, _Nonnull, _Nullable),
+-- A mixture of type qualifiers (const, volatile, restrict, _Atomic, _Nonnull, _Nullable, __read_only, __write_only),
 -- function specifiers (inline, _Noreturn),
 -- alignment specifiers (_Alignas) and
--- storage class specifiers (extern, static, auto, register, _Thread_local),
+-- storage class specifiers (extern, static, auto, register, _Thread_local, __kernel, __global, __local),
 -- in any order, but containing at least one storage class specifier.
 --
 -- declaration_qualifier_list :- <permute> type_qualifier* alignment_specifier* function_specifier* storage_class+
@@ -837,6 +842,9 @@ storage_class
   | auto			{% withNodeInfo $1 $ CAuto }
   | register			{% withNodeInfo $1 $ CRegister }
   | "__thread"			{% withNodeInfo $1 $ CThread }
+  | "__kernel"			{% withNodeInfo $1 $ CClKernel }
+  | "__global"			{% withNodeInfo $1 $ CClGlobal }
+  | "__local"			{% withNodeInfo $1 $ CClLocal }
 
 -- parse C function specifier (C11 6.7.4)
 function_specifier :: { CFunSpec }
@@ -1251,8 +1259,10 @@ type_qualifier
   | "_Nullable"         {% withNodeInfo $1 $ CNullableQual }
   | "_Nonnull"          {% withNodeInfo $1 $ CNonnullQual }
   | "_Atomic"           {% withNodeInfo $1 $ CAtomicQual }
+  | "__read_only"       {% withNodeInfo $1 $ CClRdOnlyQual }
+  | "__write_only"      {% withNodeInfo $1 $ CClWrOnlyQual }
 
--- a list containing at least one type_qualifier (const, volatile, restrict, inline, _Noreturn)
+-- a list containing at least one type_qualifier (const, volatile, restrict, inline, _Noreturn, __read_only, __write_only)
 --    and additionally CAttrs
 type_qualifier_list :: { Reversed [CTypeQual] }
 type_qualifier_list

@@ -440,6 +440,9 @@ data CStorageSpecifier a
   | CExtern   a     -- ^ extern
   | CTypedef  a     -- ^ typedef
   | CThread   a     -- ^ C11/GNUC thread local storage
+  | CClKernel a     -- ^ OpenCL kernel function
+  | CClGlobal a     -- ^ OpenCL __global variable
+  | CClLocal  a     -- ^ OpenCL __local variable
     deriving (Show, Eq,Ord,Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
 
 instance NFData a => NFData (CStorageSpecifier a)
@@ -495,6 +498,8 @@ data CTypeQualifier a
   | CAttrQual  (CAttribute a)
   | CNullableQual a
   | CNonnullQual a
+  | CClRdOnlyQual a
+  | CClWrOnlyQual a
     deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
 
 instance NFData a => NFData (CTypeQualifier a)
@@ -1039,6 +1044,9 @@ instance CNode t1 => CNode (CStorageSpecifier t1) where
         nodeInfo (CExtern d) = nodeInfo d
         nodeInfo (CTypedef d) = nodeInfo d
         nodeInfo (CThread d) = nodeInfo d
+        nodeInfo (CClKernel d) = nodeInfo d
+        nodeInfo (CClGlobal d) = nodeInfo d
+        nodeInfo (CClLocal d) = nodeInfo d
 instance CNode t1 => Pos (CStorageSpecifier t1) where
         posOf x = posOf (nodeInfo x)
 
@@ -1049,6 +1057,9 @@ instance Functor CStorageSpecifier where
         fmap _f (CExtern a1) = CExtern (_f a1)
         fmap _f (CTypedef a1) = CTypedef (_f a1)
         fmap _f (CThread a1) = CThread (_f a1)
+        fmap _f (CClKernel a1) = CClKernel (_f a1)
+        fmap _f (CClGlobal a1) = CClGlobal (_f a1)
+        fmap _f (CClLocal a1) = CClLocal (_f a1)
 
 instance Annotated CStorageSpecifier where
         annotation (CAuto n) = n
@@ -1057,12 +1068,18 @@ instance Annotated CStorageSpecifier where
         annotation (CExtern n) = n
         annotation (CTypedef n) = n
         annotation (CThread n) = n
+        annotation (CClKernel n) = n
+        annotation (CClGlobal n) = n
+        annotation (CClLocal n) = n
         amap f (CAuto a_1) = CAuto (f a_1)
         amap f (CRegister a_1) = CRegister (f a_1)
         amap f (CStatic a_1) = CStatic (f a_1)
         amap f (CExtern a_1) = CExtern (f a_1)
         amap f (CTypedef a_1) = CTypedef (f a_1)
         amap f (CThread a_1) = CThread (f a_1)
+        amap f (CClKernel a_1) = CClKernel (f a_1)
+        amap f (CClGlobal a_1) = CClGlobal (f a_1)
+        amap f (CClLocal a_1) = CClLocal (f a_1)
 
 instance CNode t1 => CNode (CTypeSpecifier t1) where
         nodeInfo (CVoidType d) = nodeInfo d
@@ -1156,6 +1173,8 @@ instance CNode t1 => CNode (CTypeQualifier t1) where
         nodeInfo (CAttrQual d) = nodeInfo d
         nodeInfo (CNullableQual d) = nodeInfo d
         nodeInfo (CNonnullQual d) = nodeInfo d
+        nodeInfo (CClRdOnlyQual d) = nodeInfo d
+        nodeInfo (CClWrOnlyQual d) = nodeInfo d
 
 instance CNode t1 => Pos (CTypeQualifier t1) where
         posOf x = posOf (nodeInfo x)
@@ -1168,6 +1187,8 @@ instance Functor CTypeQualifier where
         fmap _f (CAttrQual a1) = CAttrQual (fmap _f a1)
         fmap _f (CNullableQual a1) = CNullableQual (_f a1)
         fmap _f (CNonnullQual a1) = CNonnullQual (_f a1)
+        fmap _f (CClRdOnlyQual a1) = CClRdOnlyQual (_f a1)
+        fmap _f (CClWrOnlyQual a1) = CClWrOnlyQual (_f a1)
 
 instance Annotated CTypeQualifier where
         annotation (CConstQual n) = n
@@ -1177,6 +1198,8 @@ instance Annotated CTypeQualifier where
         annotation (CAttrQual n) = annotation n
         annotation (CNullableQual n) = n
         annotation (CNonnullQual n) = n
+        annotation (CClRdOnlyQual n) = n
+        annotation (CClWrOnlyQual n) = n
         amap f (CConstQual a_1) = CConstQual (f a_1)
         amap f (CVolatQual a_1) = CVolatQual (f a_1)
         amap f (CRestrQual a_1) = CRestrQual (f a_1)
@@ -1184,6 +1207,8 @@ instance Annotated CTypeQualifier where
         amap f (CAttrQual n) = CAttrQual (amap f n)
         amap f (CNullableQual a_1) = CNullableQual (f a_1)
         amap f (CNonnullQual a_1) = CNonnullQual (f a_1)
+        amap f (CClRdOnlyQual a_1) = CClRdOnlyQual (f a_1)
+        amap f (CClWrOnlyQual a_1) = CClWrOnlyQual (f a_1)
 
 instance CNode t1 => CNode (CFunctionSpecifier t1) where
         nodeInfo (CInlineQual d) = nodeInfo d

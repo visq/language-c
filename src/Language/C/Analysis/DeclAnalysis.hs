@@ -18,7 +18,7 @@ module Language.C.Analysis.DeclAnalysis (
   mergeOldStyle,
   -- * Dissecting type specs
   canonicalTypeSpec, NumBaseType(..),SignSpec(..),SizeMod(..),NumTypeSpec(..),TypeSpecAnalysis(..),
-  canonicalStorageSpec, StorageSpec(..), hasThreadLocalSpec, isTypeDef,
+  canonicalStorageSpec, StorageSpec(..), hasThreadLocalSpec, hasClKernelSpec, isTypeDef,
   -- * Helpers
   VarDeclInfo(..),
   tAttr,mkVarName,getOnlyDeclr,nameOfDecl,analyseVarDecl,analyseVarDecl'
@@ -76,6 +76,8 @@ tParamDecl (CDecl declspecs declrs node) =
 computeParamStorage :: NodeInfo -> StorageSpec -> Either BadSpecifierError Storage
 computeParamStorage _ NoStorageSpec = Right (Auto False)
 computeParamStorage _ RegSpec       = Right (Auto True)
+computeParamStorage _ ClGlobalSpec  = Right (Static NoLinkage False)
+computeParamStorage _ ClLocalSpec   = Right (Static NoLinkage True)
 computeParamStorage node spec       = Left . badSpecifierError node $ "Bad storage specified for parameter: " ++ show spec
 
 -- | analyse and translate a member declaration
@@ -124,13 +126,18 @@ tMemberDecls (CDecl declspecs declrs node) = zipWithM tMemberDecl (True:repeat F
             return ()
 
 data StorageSpec = NoStorageSpec | AutoSpec | RegSpec | ThreadSpec | StaticSpec Bool | ExternSpec Bool
+                 | ClKernelSpec | ClGlobalSpec | ClLocalSpec
                     deriving (Eq,Ord,Show,Read)
 
 hasThreadLocalSpec :: StorageSpec -> Bool
 hasThreadLocalSpec ThreadSpec = True
+hasThreadLocalSpec ClLocalSpec = True
 hasThreadLocalSpec (StaticSpec b) = b
 hasThreadLocalSpec (ExternSpec b) = b
 hasThreadLocalSpec _  = False
+
+hasClKernelSpec :: StorageSpec -> Bool
+hasClKernelSpec ClKernelSpec = True
 
 data VarDeclInfo = VarDeclInfo VarName FunctionAttrs StorageSpec Attributes Type NodeInfo
 
@@ -414,6 +421,8 @@ tTypeQuals = foldrM go (noTypeQuals,[]) where
     go (CAttrQual attr) (tq,attrs) = liftM (\attr' -> (tq,attr':attrs)) (tAttr attr)
     go (CNullableQual _) (tq,attrs) = return (tq { nullable = True }, attrs)
     go (CNonnullQual _) (tq,attrs) = return (tq { nonnull = True }, attrs)
+    go (CClRdOnlyQual _) (tq,attrs) = return (tq { clrdonly = True },attrs)
+    go (CClWrOnlyQual _) (tq,attrs) = return (tq { clwronly = True },attrs)
 
 -- * analysis
 
@@ -481,6 +490,9 @@ canonicalStorageSpec storagespecs = liftM elideAuto $ foldrM updStorage NoStorag
         updStorage (CAuto _) NoStorageSpec     = return AutoSpec
         updStorage (CRegister _) NoStorageSpec = return RegSpec
         updStorage (CThread _) NoStorageSpec   = return ThreadSpec
+        updStorage (CClKernel _) NoStorageSpec = return ClKernelSpec
+        updStorage (CClGlobal _) NoStorageSpec = return ClGlobalSpec
+        updStorage (CClLocal  _) NoStorageSpec = return ClLocalSpec
         updStorage (CThread _) (StaticSpec _)  = return$ StaticSpec True
         updStorage (CThread _) (ExternSpec _)  = return$ ExternSpec True
         updStorage (CStatic _) NoStorageSpec   = return$ StaticSpec False

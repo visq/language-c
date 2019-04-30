@@ -141,6 +141,11 @@ data CToken = CTokLParen   !PosLength            -- `('
             | CTokTyIdent  !PosLength !Ident     -- `typedef-name' identifier
             | CTokGnuC !GnuCTok !PosLength       -- special GNU C tokens
             | CTokClangC !PosLength !ClangCTok   -- special Clang C tokens
+            | CTokClKernel !PosLength            -- OpenCL `__kernel'
+            | CTokClRdOnly !PosLength            -- OpenCL `__read_only'
+            | CTokClWrOnly !PosLength            -- OpenCL `__write_only'
+            | CTokClGlobal !PosLength            -- OpenCL `__Global'
+            | CTokClLocal  !PosLength            -- OpenCL `__Local'
             | CTokEof                           -- end of file
 
 -- special tokens used in GNU C extensions to ANSI C
@@ -265,6 +270,11 @@ posLenOfTok (CTokIdent    pos _) = pos
 posLenOfTok (CTokTyIdent  pos _) = pos
 posLenOfTok (CTokGnuC   _ pos  ) = pos
 posLenOfTok (CTokClangC   pos _) = pos
+posLenOfTok (CTokClKernel pos  ) = pos
+posLenOfTok (CTokClRdOnly pos  ) = pos
+posLenOfTok (CTokClWrOnly pos  ) = pos
+posLenOfTok (CTokClGlobal pos  ) = pos
+posLenOfTok (CTokClLocal  pos  ) = pos
 posLenOfTok CTokEof = error "tokenPos: Eof"
 
 instance Show CToken where
@@ -380,4 +390,9 @@ instance Show CToken where
   showsPrec _ (CTokGnuC GnuCTyCompat _) = showString "__builtin_types_compatible_p"
   showsPrec _ (CTokClangC _ (ClangCVersionTok v)) = shows v
   showsPrec _ (CTokClangC _ ClangBuiltinConvertVector) = showString "__builtin_convertvector"
+  showsPrec _ (CTokClKernel _  ) = showString "__kernel"
+  showsPrec _ (CTokClRdOnly _  ) = showString "__read_only"
+  showsPrec _ (CTokClWrOnly _  ) = showString "__write_only"
+  showsPrec _ (CTokClGlobal _  ) = showString "__global"
+  showsPrec _ (CTokClLocal  _  ) = showString "__Local"
   showsPrec _ CTokEof = error "show CToken : CTokEof"

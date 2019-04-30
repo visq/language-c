@@ -356,6 +356,7 @@ idkwtok ('_' : '_' : 'c' : 'o' : 'm' : 'p' : 'l' : 'e' : 'x' : '_' : '_' : []) =
 idkwtok ('_' : '_' : 'c' : 'o' : 'n' : 's' : 't' : []) = tok 7 CTokConst
 idkwtok ('c' : 'o' : 'n' : 's' : 't' : []) = tok 5 CTokConst
 idkwtok ('_' : '_' : 'c' : 'o' : 'n' : 's' : 't' : '_' : '_' : []) = tok 9 CTokConst
+idkwtok ('_' : '_' : 'c' : 'o' : 'n' : 's' : 't' : 'a' : 'n' : 't' : []) = tok 10 CTokConst
 idkwtok ('c' : 'o' : 'n' : 't' : 'i' : 'n' : 'u' : 'e' : []) = tok 8 CTokContinue
 idkwtok ('d' : 'e' : 'f' : 'a' : 'u' : 'l' : 't' : []) = tok 7 CTokDefault
 idkwtok ('d' : 'o' : []) = tok 2 CTokDo
@@ -415,6 +416,12 @@ idkwtok ('_' : 'F' : 'l' : 'o' : 'a' : 't' : '6' : '4' : 'x' : []) = tok 9 (CTok
 idkwtok ('_' : 'F' : 'l' : 'o' : 'a' : 't' : '1' : '2' : '8' : []) = tok 9 (CTokFloatN 128 False)
 idkwtok ('_' : 'F' : 'l' : 'o' : 'a' : 't' : '1' : '2' : '8' : 'x' : []) = tok 10 (CTokFloatN 128 True)
 #endif
+-- For OpenCL tokens
+idkwtok ('_' : '_' : 'k' : 'e' : 'r' : 'n' : 'e' : 'l' : []) = tok 8 CTokClKernel
+idkwtok ('_' : '_' : 'r' : 'e' : 'a' : 'd' : '_' : 'o' : 'n' : 'l' : 'y' : []) = tok 11 CTokClRdOnly
+idkwtok ('_' : '_' : 'w' : 'r' : 'i' : 't' : 'e' : '_' : 'o' : 'n' : 'l' : 'y' : []) = tok 12 CTokClWrOnly
+idkwtok ('_' : '_' : 'g' : 'l' : 'o' : 'b' : 'a' : 'l' : []) = tok 8 CTokClGlobal
+idkwtok ('_' : '_' : 'l' : 'o' : 'c' : 'a' : 'l' : []) = tok 7 CTokClLocal
 
 idkwtok cs = \pos -> do
   name <- getNewName

@@ -493,26 +493,30 @@ instance Declaration Enumerator where
 -- | Type qualifiers: constant, volatile and restrict
 data TypeQuals = TypeQuals { constant :: Bool, volatile :: Bool,
                              restrict :: Bool, atomic :: Bool,
-                             nullable :: Bool, nonnull  :: Bool }
+                             nullable :: Bool, nonnull  :: Bool,
+                             clrdonly :: Bool, clwronly :: Bool }
     deriving (Typeable, Data)
 
 instance Eq TypeQuals where
- (==) (TypeQuals c1 v1 r1 a1 n1 nn1) (TypeQuals c2 v2 r2 a2 n2 nn2) =
+ (==) (TypeQuals c1 v1 r1 a1 n1 nn1 rd1 wr1) (TypeQuals c2 v2 r2 a2 n2 nn2 rd2 wr2) =
     c1 == c2 && v1 == v2 && r1 == r2 && a1 == a2 && n1 == n2 && nn1 == nn2
+    && rd1 == rd2 && wr1 == wr2
 
 instance Ord TypeQuals where
-  (<=) (TypeQuals c1 v1 r1 a1 n1 nn1) (TypeQuals c2 v2 r2 a2 n2 nn2) =
+  (<=) (TypeQuals c1 v1 r1 a1 n1 nn1 rd1 wr1) (TypeQuals c2 v2 r2 a2 n2 nn2 rd2 wr2) =
     c1 <= c2 && v1 <= v2 && r1 <= r2 && a1 <= a2 && n1 <= n2 && nn1 <= nn2
+    && rd1 <= rd2 && wr1 <= wr2
 
 
 -- | no type qualifiers
 noTypeQuals :: TypeQuals
-noTypeQuals = TypeQuals False False False False False False
+noTypeQuals = TypeQuals False False False False False False False False
 
 -- | merge (/&&/) two type qualifier sets
 mergeTypeQuals :: TypeQuals -> TypeQuals -> TypeQuals
-mergeTypeQuals (TypeQuals c1 v1 r1 a1 n1 nn1) (TypeQuals c2 v2 r2 a2 n2 nn2) =
+mergeTypeQuals (TypeQuals c1 v1 r1 a1 n1 nn1 rd1 wr1) (TypeQuals c2 v2 r2 a2 n2 nn2 rd2 wr2) =
   TypeQuals (c1 && c2) (v1 && v2) (r1 && r2) (a1 && a2) (n1 && n2) (nn1 && nn2)
+            (rd1 && rd2) (wr1 && wr2)
 
 -- * initializers
 

@@ -183,6 +183,7 @@ computeFunDefStorage ident other_spec  = do
   let defaultSpec = FunLinkage ExternalLinkage
   case other_spec of
     NoStorageSpec  -> return$ maybe defaultSpec declStorage obj_opt
+    ClKernelSpec  -> return$ maybe defaultSpec declStorage obj_opt
     (ExternSpec False) -> return$ maybe defaultSpec declStorage obj_opt
     bad_spec -> throwTravError $ badSpecifierError (nodeInfo ident)
                   $ "unexpected function storage specifier (only static or extern is allowed)" ++ show bad_spec

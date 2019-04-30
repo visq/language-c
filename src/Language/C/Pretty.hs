@@ -237,6 +237,9 @@ instance Pretty CStorageSpec where
     pretty (CExtern _) = text "extern"
     pretty (CTypedef _) = text "typedef"
     pretty (CThread _) = text "_Thread_local"
+    pretty (CClKernel _) = text "__kernel"
+    pretty (CClGlobal _) = text "__global"
+    pretty (CClLocal _)  = text "__local"
 
 instance Pretty CTypeSpec where
     pretty (CVoidType _)        = text "void"
@@ -271,6 +274,8 @@ instance Pretty CTypeQual where
     pretty (CAttrQual a)  = attrlistP [a]
     pretty (CNullableQual _) = text "_Nullable"
     pretty (CNonnullQual _) = text "_Nonnull"
+    pretty (CClRdOnlyQual _) = text "__read_only"
+    pretty (CClWrOnlyQual _) = text "__write_only"
 
 instance Pretty CFunSpec where
     pretty (CInlineQual _) = text "inline"
