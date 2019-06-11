@@ -39,7 +39,7 @@ Flag iecFpExtension
     Default: True
 Library
     Extensions: CPP, DeriveDataTypeable, DeriveGeneric, PatternGuards, BangPatterns, ExistentialQuantification, GeneralizedNewtypeDeriving, ScopedTypeVariables
-    Build-Depends: base >= 3 && < 5,
+    Build-Depends: base >= 4.7 && < 5,
                    array,
                    containers >= 0.3,
                    deepseq >= 1.4.0.0 && < 1.5,
