@@ -25,7 +25,8 @@ CUnaryOp(..),
 isEffectfulOp
 )
 where
-import Data.Generics hiding (Generic)
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 -- | C assignment operators (K&R A7.17)

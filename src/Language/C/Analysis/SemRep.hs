@@ -58,7 +58,8 @@ import Language.C.Syntax
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
-import Data.Generics
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 
 -- | accessor class : struct\/union\/enum names
 class HasSUERef a where

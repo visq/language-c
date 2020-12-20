@@ -27,7 +27,8 @@ module Language.C.Data.Position (
   incOffset,
   Pos(..),
 ) where
-import Data.Generics hiding (Generic)
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 

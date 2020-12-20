@@ -30,7 +30,8 @@ where
 import Data.Bits
 import Data.Char
 import Numeric (showOct, showHex, readHex, readOct, readDec)
-import Data.Generics hiding (Generic)
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic, Generic1)
 import Control.DeepSeq (NFData)
 

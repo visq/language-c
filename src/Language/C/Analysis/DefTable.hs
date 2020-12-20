@@ -40,7 +40,8 @@ import Language.C.Analysis.SemRep
 import qualified Data.Map as Map
 import Data.IntMap (IntMap, union)
 import qualified Data.IntMap as IntMap
-import Data.Generics
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 
 {- Name spaces, scopes and contexts [Scopes]
 

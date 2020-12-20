@@ -62,7 +62,8 @@ import Language.C.Syntax.Ops
 import Language.C.Data.Ident
 import Language.C.Data.Node
 import Language.C.Data.Position
-import Data.Generics hiding (Generic)
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic, Generic1)
 import Control.DeepSeq (NFData)
 

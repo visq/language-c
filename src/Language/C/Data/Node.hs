@@ -21,7 +21,8 @@ module Language.C.Data.Node (
 ) where
 import Language.C.Data.Position
 import Language.C.Data.Name     (Name)
-import Data.Generics hiding (Generic)
+import Data.Data (Data)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 

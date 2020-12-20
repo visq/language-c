@@ -12,8 +12,9 @@
 module Language.C.Data.Name (
 Name(..),newNameSupply, namesStartingFrom
 ) where
+import Data.Data (Data)
 import Data.Ix
-import Data.Generics hiding (Generic)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 
