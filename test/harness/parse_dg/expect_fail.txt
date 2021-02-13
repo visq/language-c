@@ -219,7 +219,6 @@ instrumented-mask.i
 int-warning.i
 ipa-1.i
 ipa-2.i
-ipa-icf-27.i
 irrevocable-1.i
 irrevocable-2.i
 irrevocable-3.i

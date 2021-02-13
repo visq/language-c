@@ -2250,6 +2250,7 @@ ipa-icf-23.i
 ipa-icf-24.i
 ipa-icf-25.i
 ipa-icf-26.i
+ipa-icf-27.i
 ipa-icf-28.i
 ipa-icf-29.i
 ipa-icf-2.i
