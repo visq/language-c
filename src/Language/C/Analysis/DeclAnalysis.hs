@@ -474,6 +474,8 @@ canonicalTypeSpec = foldrM go TSNone where
                             = return$  TSNum$ nts { signSpec = Signed }
     go (CUnsigType _)   tsa | (Just nts@(NumTypeSpec { signSpec = NoSignSpec })) <- getNTS tsa
                             = return$  TSNum$ nts { signSpec = Unsigned }
+    go (CUInt128Type _) tsa | (Just nts@(NumTypeSpec { signSpec = NoSignSpec, base = NoBaseType })) <- getNTS tsa
+                            = return$  TSNum$ nts { signSpec = Unsigned, base = BaseInt128 }
     go (CComplexType _) tsa | (Just nts@(NumTypeSpec { isComplex = False })) <- getNTS tsa
                             = return$  TSNum$ nts { isComplex = True }
     go (CTypeDef i ni) TSNone = liftM TSTypeDef $ typeDefRef ni i
