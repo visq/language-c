@@ -77,7 +77,7 @@ import Control.DeepSeq (NFData)
 type CTranslUnit = CTranslationUnit NodeInfo
 data CTranslationUnit a
   = CTranslUnit [CExternalDeclaration a] a
-    deriving (Show, Data, Typeable, Generic, Generic1, Functor  {-! ,CNode , Annotated !-})
+    deriving (Eq, Show, Data, Typeable, Generic, Generic1, Functor  {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CTranslationUnit a)
 
@@ -89,7 +89,7 @@ data CExternalDeclaration a
   = CDeclExt (CDeclaration a)
   | CFDefExt (CFunctionDef a)
   | CAsmExt  (CStringLiteral a) a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CExternalDeclaration a)
 
@@ -114,7 +114,7 @@ data CFunctionDef a
     [CDeclaration a]          -- optional declaration list
     (CStatement a)            -- compound statement
     a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CFunctionDef a)
 
@@ -165,7 +165,7 @@ data CDeclarationItem a
       (Maybe (CDeclarator a))  -- declarator (may be omitted)
       (Maybe (CInitializer a)) -- optional initialize
       (Maybe (CExpression a))
-  deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+  deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 pattern CDeclI a = CDeclarationItem (Just a) Nothing Nothing 
 
@@ -181,7 +181,7 @@ data CDeclaration a
       (CExpression a)         -- assert expression
       (CStringLiteral a)      -- assert text
       a                       -- annotation
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CDeclaration a)
 
@@ -233,7 +233,7 @@ instance NFData a => NFData (CDeclaration a)
 type CDeclr = CDeclarator NodeInfo
 data CDeclarator a
   = CDeclr (Maybe (Identifier a)) [CDerivedDeclarator a] (Maybe (CStringLiteral a)) [CAttribute a] a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CDeclarator a)
 
@@ -256,14 +256,14 @@ data CDerivedDeclarator a
   -- ^ Array declarator @CArrDeclr declr tyquals size-expr?@
   | CFunDeclr (CFunParams a) [CAttribute a] a
     -- ^ Function declarator @CFunDeclr declr (old-style-params | new-style-params) c-attrs@
-    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode , Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CDerivedDeclarator a)
 
 data CFunParams a 
   = CFunParamsOld [Identifier a]
   | CFunParamsNew [CDeclaration a] Bool
-  deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
+  deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CFunParams a)
 
@@ -272,14 +272,14 @@ type CArrSize = CArraySize NodeInfo
 data CArraySize a
   = CNoArrSize Bool               -- ^ @CUnknownSize isCompleteType@
   | CArrSize Bool (CExpression a) -- ^ @CArrSize isStatic expr@
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! , Functor !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! , Functor !-})
 
 instance NFData a => NFData (CArraySize a)
 
 data CForInit a 
   = CForDecl (CDeclaration a)
   | CForInitializing (Maybe (CExpression a))
-  deriving (Show, Data,Typeable, Generic, Functor {-! , CNode , Annotated !-})
+  deriving (Eq, Show, Data,Typeable, Generic, Functor {-! , CNode , Annotated !-})
 
 instance NFData a => NFData (CForInit a)
 
@@ -327,7 +327,7 @@ data CStatement a
   | CReturn (Maybe (CExpression a)) a
   -- | assembly statement
   | CAsm (CAssemblyStatement a) a
-    deriving (Show, Data,Typeable, Generic, Functor {-! , CNode , Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Functor {-! , CNode , Annotated !-})
 
 instance NFData a => NFData (CStatement a)
 
@@ -349,7 +349,7 @@ data CAssemblyStatement a
     [CAssemblyOperand a]       -- input operands
     [CStringLiteral a]         -- Clobbers
     a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAssemblyStatement a)
 
@@ -364,7 +364,7 @@ data CAssemblyOperand a
     (CStringLiteral a)  -- constraint expr
     (CExpression a)     -- argument
     a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAssemblyOperand a)
 
@@ -377,7 +377,7 @@ data CCompoundBlockItem a
   = CBlockStmt    (CStatement a)    -- ^ A statement
   | CBlockDecl    (CDeclaration a)  -- ^ A local declaration
   | CNestedFunDef (CFunctionDef a)  -- ^ A nested function (GNU C)
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! , CNode , Functor, Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! , CNode , Functor, Annotated !-})
 
 instance NFData a => NFData (CCompoundBlockItem a)
 
@@ -392,7 +392,7 @@ data CDeclarationSpecifier a
   | CTypeQual    (CTypeQualifier a)    -- ^ type qualifier
   | CFunSpec     (CFunctionSpecifier a) -- ^ function specifier
   | CAlignSpec   (CAlignmentSpecifier a) -- ^ alignment specifier
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CDeclarationSpecifier a)
 
@@ -424,7 +424,7 @@ data CStorageSpecifier a
   | CClKernel a     -- ^ OpenCL kernel function
   | CClGlobal a     -- ^ OpenCL __global variable
   | CClLocal  a     -- ^ OpenCL __local variable
-    deriving (Show, Eq,Ord,Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Ord,Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CStorageSpecifier a)
 
@@ -455,7 +455,7 @@ data CTypeSpecifier a
   | CTypeOfExpr  (CExpression a)  a  -- ^ @typeof(expr)@
   | CTypeOfType  (CDeclaration a) a  -- ^ @typeof(type)@
   | CAtomicType  (CDeclaration a) a  -- ^ @_Atomic(type)@
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CTypeSpecifier a)
 
@@ -481,7 +481,7 @@ data CTypeQualifier a
   | CNonnullQual a
   | CClRdOnlyQual a
   | CClWrOnlyQual a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CTypeQualifier a)
 
@@ -492,7 +492,7 @@ type CFunSpec = CFunctionSpecifier NodeInfo
 data CFunctionSpecifier a
   = CInlineQual a
   | CNoreturnQual a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CFunctionSpecifier a)
 
@@ -502,7 +502,7 @@ type CAlignSpec = CAlignmentSpecifier NodeInfo
 data CAlignmentSpecifier a
   = CAlignAsType (CDeclaration a) a  -- ^ @_Alignas(type)@
   | CAlignAsExpr (CExpression a) a   -- ^ @_Alignas(expr)@
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAlignmentSpecifier a)
 
@@ -524,14 +524,14 @@ data CStructureUnion a
     (Maybe [CDeclaration a])  -- member declarations
     [CAttribute a]            -- __attribute__s
     a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CStructureUnion a)
 
 -- | A tag to determine wheter we refer to a @struct@ or @union@, see 'CStructUnion'.
 data CStructTag = CStructTag
                 | CUnionTag
-                deriving (Show, Eq,Data,Typeable, Generic)
+                deriving (Eq, Show, Data,Typeable, Generic)
 
 instance NFData CStructTag
 
@@ -540,7 +540,7 @@ data CEnumVariant a =
   CEnumVar 
     (Identifier a) -- variant name
     (Maybe (CExpression a)) -- explicit variant value
-  deriving (Show, Data, Typeable, Generic, Generic1, Functor)
+  deriving (Eq, Show, Data, Typeable, Generic, Generic1, Functor)
 
 instance NFData a => NFData (CEnumVariant a)
 
@@ -563,7 +563,7 @@ data CEnumeration a
     (Maybe [CEnumVariant a]) 
     [CAttribute a]                    -- __attribute__s
     a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CEnumeration a)
 
@@ -578,7 +578,7 @@ data CInitializer a
   = CInitExpr (CExpression a) a
   -- | initialization list (see 'CInitList')
   | CInitList (CInitializerList a) a
-    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode , Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CInitializer a)
 
@@ -610,7 +610,7 @@ instance NFData a => NFData (CInitializer a)
 -- > in  CInitList [(CMemberDesig "s", init_s)]
 type CInitList = CInitializerList NodeInfo
 newtype CInitializerList a = CInitializerList [([CPartDesignator a], CInitializer a)]
-  deriving (Show, Data, Typeable, Generic, Functor)
+  deriving (Eq, Show, Data, Typeable, Generic, Functor)
 
 instance NFData a => NFData (CInitializerList a)
 
@@ -626,7 +626,7 @@ data CPartDesignator a
   | CMemberDesig  (Identifier a) a
   -- | array range designator @CRangeDesig from to _@ (GNU C)
   | CRangeDesig (CExpression a) (CExpression a) a
-    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CPartDesignator a)
 
@@ -636,7 +636,7 @@ instance NFData a => NFData (CPartDesignator a)
 -- and serve as generic properties of some syntax tree elements.
 type CAttr = CAttribute NodeInfo
 data CAttribute a = CAttr (Identifier a) [CExpression a] a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAttribute a)
 
@@ -701,14 +701,14 @@ data CExpression a
   | CStatExpr    (CStatement a) a        -- ^ GNU C compound statement as expr
   | CLabAddrExpr (Identifier a) a            -- ^ GNU C address of label
   | CBuiltinExpr (CBuiltinThing a)       -- ^ builtin expressions, see 'CBuiltin'
-    deriving (Data,Typeable, Show, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
+    deriving (Eq, Data,Typeable, Show, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CExpression a)
 
 data CGenericSelector a = CGenericSelector
   (Maybe (CDeclaration a)) 
   (CExpression a)
-  deriving (Data,Typeable,Show, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
+  deriving (Eq, Data,Typeable,Show, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CGenericSelector a)
 
@@ -720,7 +720,7 @@ data CBuiltinThing a
   | CBuiltinOffsetOf (CDeclaration a) [CPartDesignator a] a -- ^ @(type, designator-list)@
   | CBuiltinTypesCompatible (CDeclaration a) (CDeclaration a) a  -- ^ @(type,type)@
   | CBuiltinConvertVector (CExpression a) (CDeclaration a) a -- ^ @(expr, type)@
-    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CBuiltinThing a)
 
@@ -731,14 +731,14 @@ data CConstant a
   | CCharConst  CChar a
   | CFloatConst CFloat a
   | CStrConst   CString a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CConstant a)
 
 -- | Attributed string literals
 type CStrLit = CStringLiteral NodeInfo
 data CStringLiteral a = CStrLit CString a
-    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+    deriving (Eq, Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CStringLiteral a)
 
