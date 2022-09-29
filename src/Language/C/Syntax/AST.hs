@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 -----------------------------------------------------------------------------
 -- |
@@ -28,29 +30,29 @@ module Language.C.Syntax.AST (
   CTranslUnit,  CExtDecl,
   CTranslationUnit(..),  CExternalDeclaration(..),
   -- * Declarations
-  CFunDef,  CDecl, CStructUnion, CEnum,
+  CFunDef,  CDecl, CStructUnion, CEnum, CEnumVar,
   CFunctionDef(..),  CDeclaration(..),
-  CStructTag(..), CStructureUnion(..),  CEnumeration(..),
+  CStructTag(..), CStructureUnion(..), CEnumeration(..), CEnumVariant(..), CFunParams(..),
   -- * Declaration attributes
   CDeclSpec, partitionDeclSpecs,
   CStorageSpec, CTypeSpec, isSUEDef, CTypeQual, CFunSpec, CAlignSpec,  CAttr,
   CFunctionSpecifier(..), CDeclarationSpecifier(..), CStorageSpecifier(..), CTypeSpecifier(..),
   CAlignmentSpecifier(..),
-  CTypeQualifier(..), CAttribute(..),
+  CTypeQualifier(..), CAttribute(..), CDeclarationItem(..), pattern CDeclI,
   -- * Declarators
   CDeclr,CDerivedDeclr,CArrSize,
   CDeclarator(..), CDerivedDeclarator(..), CArraySize(..),
   -- * Initialization
   CInit, CInitList, CDesignator,
-  CInitializer(..), CInitializerList, CPartDesignator(..),
+  CInitializer(..), CInitializerList(..), CPartDesignator(..),
   -- * Statements
   CStat, CBlockItem, CAsmStmt, CAsmOperand,
-  CStatement(..), CCompoundBlockItem(..),
+  CStatement(..), CCompoundBlockItem(..), CForInit(..),
   CAssemblyStatement(..), CAssemblyOperand(..),
   -- * Expressions
   CExpr, CExpression(..),
   CAssignOp(..), CBinaryOp(..), CUnaryOp(..),
-  CBuiltin, CBuiltinThing(..),
+  CBuiltin, CBuiltinThing(..), CGenericSelector(..),
   -- * Constants
   CConst, CStrLit, cstringOfLit, liftStrLit,
   CConstant(..), CStringLiteral(..),
@@ -63,6 +65,7 @@ import Language.C.Data.Ident
 import Language.C.Data.Node
 import Language.C.Data.Position
 import Data.Data (Data)
+import Data.Bifunctor (bimap)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic, Generic1)
 import Control.DeepSeq (NFData)
@@ -74,7 +77,7 @@ import Control.DeepSeq (NFData)
 type CTranslUnit = CTranslationUnit NodeInfo
 data CTranslationUnit a
   = CTranslUnit [CExternalDeclaration a] a
-    deriving (Show, Data, Typeable, Generic, Generic1 {-! ,CNode ,Functor, Annotated !-})
+    deriving (Show, Data, Typeable, Generic, Generic1, Functor  {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CTranslationUnit a)
 
@@ -86,7 +89,7 @@ data CExternalDeclaration a
   = CDeclExt (CDeclaration a)
   | CFDefExt (CFunctionDef a)
   | CAsmExt  (CStringLiteral a) a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor, Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CExternalDeclaration a)
 
@@ -111,7 +114,7 @@ data CFunctionDef a
     [CDeclaration a]          -- optional declaration list
     (CStatement a)            -- compound statement
     a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CFunctionDef a)
 
@@ -156,30 +159,32 @@ instance NFData a => NFData (CFunctionDef a)
 --
 --   * @init-declarator-list@ must contain at most one triple of the form @(Just declr, Nothing, Nothing)@.
 --     where @declr@ is an abstract declarator (i.e. doesn't contain a declared identifier)
---
+
+data CDeclarationItem a 
+  = CDeclarationItem 
+      (Maybe (CDeclarator a))  -- declarator (may be omitted)
+      (Maybe (CInitializer a)) -- optional initialize
+      (Maybe (CExpression a))
+  deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
+
+pattern CDeclI a = CDeclarationItem (Just a) Nothing Nothing 
+
+instance NFData a => NFData (CDeclarationItem a)
+
 type CDecl = CDeclaration NodeInfo
 data CDeclaration a
   = CDecl
     [CDeclarationSpecifier a] -- type specifier and qualifier, __attribute__
-    [(Maybe (CDeclarator a),  -- declarator (may be omitted)
-      Maybe (CInitializer a), -- optional initialize
-      Maybe (CExpression a))] -- optional size (const expr)
+    [CDeclarationItem a] -- optional size (const expr)
     a                         -- annotation
     | CStaticAssert
       (CExpression a)         -- assert expression
       (CStringLiteral a)      -- assert text
       a                       -- annotation
-    deriving (Show, Data,Typeable, Generic {-! ,CNode ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CDeclaration a)
 
--- Derive instance is a little bit ugly
-instance Functor CDeclaration where
-  fmap f (CDecl specs declarators annot) =
-    CDecl (map (fmap f) specs) (map fmap3m declarators) (f annot)
-      where fmap3m (a,b,c) = (fmap (fmap f) a, fmap (fmap f) b, fmap (fmap f) c)
-  fmap f (CStaticAssert expression strlit annot) =
-    CStaticAssert (fmap f expression) (fmap f strlit) (f annot)
 
 -- | C declarator (K&R A8.5, C99 6.7.5) and abstract declarator (K&R A8.8, C99 6.7.6)
 --
@@ -227,8 +232,8 @@ instance Functor CDeclaration where
 -- > CDeclr "f" [CPtrDeclr [const], CFunDeclr []]
 type CDeclr = CDeclarator NodeInfo
 data CDeclarator a
-  = CDeclr (Maybe Ident) [CDerivedDeclarator a] (Maybe (CStringLiteral a)) [CAttribute a] a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+  = CDeclr (Maybe (Identifier a)) [CDerivedDeclarator a] (Maybe (CStringLiteral a)) [CAttribute a] a
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CDeclarator a)
 
@@ -249,37 +254,41 @@ data CDerivedDeclarator a
   -- ^ Pointer declarator @CPtrDeclr tyquals declr@
   | CArrDeclr [CTypeQualifier a] (CArraySize a) a
   -- ^ Array declarator @CArrDeclr declr tyquals size-expr?@
-  | CFunDeclr (Either [Ident] ([CDeclaration a],Bool)) [CAttribute a] a
+  | CFunDeclr (CFunParams a) [CAttribute a] a
     -- ^ Function declarator @CFunDeclr declr (old-style-params | new-style-params) c-attrs@
-    deriving (Show, Data,Typeable, Generic {-! ,CNode , Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CDerivedDeclarator a)
 
--- Derived instance relies on fmap2
-instance Functor CDerivedDeclarator where
-        fmap _f (CPtrDeclr a1 a2) = CPtrDeclr (fmap (fmap _f) a1) (_f a2)
-        fmap _f (CArrDeclr a1 a2 a3)
-          = CArrDeclr (fmap (fmap _f) a1) (fmap _f a2) (_f a3)
-        fmap _f (CFunDeclr a1 a2 a3)
-          = CFunDeclr (fmap (fmapFirst (fmap (fmap _f))) a1) (fmap (fmap _f) a2)
-              (_f a3)
-          where fmapFirst f (a,b) = (f a, b)
+data CFunParams a 
+  = CFunParamsOld [Identifier a]
+  | CFunParamsNew [CDeclaration a] Bool
+  deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
+
+instance NFData a => NFData (CFunParams a)
 
 -- | Size of an array
 type CArrSize = CArraySize NodeInfo
 data CArraySize a
   = CNoArrSize Bool               -- ^ @CUnknownSize isCompleteType@
   | CArrSize Bool (CExpression a) -- ^ @CArrSize isStatic expr@
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! , Functor !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! , Functor !-})
 
 instance NFData a => NFData (CArraySize a)
+
+data CForInit a 
+  = CForDecl (CDeclaration a)
+  | CForInitializing (Maybe (CExpression a))
+  deriving (Show, Data,Typeable, Generic, Functor {-! , CNode , Annotated !-})
+
+instance NFData a => NFData (CForInit a)
 
 -- | C statement (K&R A9, C99 6.8)
 --
 type CStat = CStatement NodeInfo
 data CStatement a
   -- | An (attributed) label followed by a statement
-  = CLabel  Ident (CStatement a) [CAttribute a] a
+  = CLabel  (Identifier a) (CStatement a) [CAttribute a] a
   -- | A statement of the form @case expr : stmt@
   | CCase (CExpression a) (CStatement a) a
   -- | A case range of the form @case lower ... upper : stmt@
@@ -290,7 +299,7 @@ data CStatement a
   --   side-effects and discarding the result.
   | CExpr (Maybe (CExpression a)) a
   -- | compound statement @CCompound localLabels blockItems at@
-  | CCompound [Ident] [CCompoundBlockItem a] a
+  | CCompound [Identifier a] [CCompoundBlockItem a] a
   -- | conditional statement @CIf ifExpr thenStmt maybeElseStmt at@
   | CIf (CExpression a) (CStatement a) (Maybe (CStatement a)) a
   -- | switch statement @CSwitch selectorExpr switchStmt@, where
@@ -301,13 +310,13 @@ data CStatement a
   | CWhile (CExpression a) (CStatement a) Bool a
   -- | for statement @CFor init expr-2 expr-3 stmt@, where @init@ is
   -- either a declaration or initializing expression
-  | CFor (Either (Maybe (CExpression a)) (CDeclaration a))
+  | CFor (CForInit a)
     (Maybe (CExpression a))
     (Maybe (CExpression a))
     (CStatement a)
     a
   -- | goto statement @CGoto label@
-  | CGoto Ident a
+  | CGoto (Identifier a) a
   -- | computed goto @CGotoPtr labelExpr@
   | CGotoPtr (CExpression a) a
   -- | continue statement
@@ -318,38 +327,9 @@ data CStatement a
   | CReturn (Maybe (CExpression a)) a
   -- | assembly statement
   | CAsm (CAssemblyStatement a) a
-    deriving (Show, Data,Typeable, Generic {-! , CNode , Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Functor {-! , CNode , Annotated !-})
 
 instance NFData a => NFData (CStatement a)
-
--- Derived instance relies on fmap2 :(
-instance Functor CStatement where
-        fmap _f (CLabel a1 a2 a3 a4)
-          = CLabel a1 (fmap _f a2) (fmap (fmap _f) a3) (_f a4)
-        fmap _f (CCase a1 a2 a3) = CCase (fmap _f a1) (fmap _f a2) (_f a3)
-        fmap _f (CCases a1 a2 a3 a4)
-          = CCases (fmap _f a1) (fmap _f a2) (fmap _f a3) (_f a4)
-        fmap _f (CDefault a1 a2) = CDefault (fmap _f a1) (_f a2)
-        fmap _f (CExpr a1 a2) = CExpr (fmap (fmap _f) a1) (_f a2)
-        fmap _f (CCompound a1 a2 a3)
-          = CCompound a1 (fmap (fmap _f) a2) (_f a3)
-        fmap _f (CIf a1 a2 a3 a4)
-          = CIf (fmap _f a1) (fmap _f a2) (fmap (fmap _f) a3) (_f a4)
-        fmap _f (CSwitch a1 a2 a3)
-          = CSwitch (fmap _f a1) (fmap _f a2) (_f a3)
-        fmap _f (CWhile a1 a2 a3 a4)
-          = CWhile (fmap _f a1) (fmap _f a2) a3 (_f a4)
-        fmap _f (CFor a1 a2 a3 a4 a5)
-          = CFor (mapEither (fmap (fmap _f)) (fmap _f) a1)
-                 (fmap (fmap _f) a2) (fmap (fmap _f) a3) (fmap _f a4)
-                 (_f a5)
-          where mapEither f1 f2 = either (Left . f1) (Right . f2)
-        fmap _f (CGoto a1 a2) = CGoto a1 (_f a2)
-        fmap _f (CGotoPtr a1 a2) = CGotoPtr (fmap _f a1) (_f a2)
-        fmap _f (CCont a1) = CCont (_f a1)
-        fmap _f (CBreak a1) = CBreak (_f a1)
-        fmap _f (CReturn a1 a2) = CReturn (fmap (fmap _f) a1) (_f a2)
-        fmap _f (CAsm a1 a2) = CAsm (fmap _f a1) (_f a2)
 
 -- | GNU Assembler statement
 --
@@ -369,7 +349,7 @@ data CAssemblyStatement a
     [CAssemblyOperand a]       -- input operands
     [CStringLiteral a]         -- Clobbers
     a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAssemblyStatement a)
 
@@ -380,11 +360,11 @@ instance NFData a => NFData (CAssemblyStatement a)
 type CAsmOperand = CAssemblyOperand NodeInfo
 data CAssemblyOperand a
   = CAsmOperand
-    (Maybe Ident)       -- argument name
+    (Maybe (Identifier a))       -- argument name
     (CStringLiteral a)  -- constraint expr
     (CExpression a)     -- argument
     a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAssemblyOperand a)
 
@@ -397,7 +377,7 @@ data CCompoundBlockItem a
   = CBlockStmt    (CStatement a)    -- ^ A statement
   | CBlockDecl    (CDeclaration a)  -- ^ A local declaration
   | CNestedFunDef (CFunctionDef a)  -- ^ A nested function (GNU C)
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! , CNode , Functor, Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! , CNode , Functor, Annotated !-})
 
 instance NFData a => NFData (CCompoundBlockItem a)
 
@@ -412,7 +392,7 @@ data CDeclarationSpecifier a
   | CTypeQual    (CTypeQualifier a)    -- ^ type qualifier
   | CFunSpec     (CFunctionSpecifier a) -- ^ function specifier
   | CAlignSpec   (CAlignmentSpecifier a) -- ^ alignment specifier
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor, Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CDeclarationSpecifier a)
 
@@ -444,7 +424,7 @@ data CStorageSpecifier a
   | CClKernel a     -- ^ OpenCL kernel function
   | CClGlobal a     -- ^ OpenCL __global variable
   | CClLocal  a     -- ^ OpenCL __local variable
-    deriving (Show, Eq,Ord,Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Eq,Ord,Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CStorageSpecifier a)
 
@@ -471,11 +451,11 @@ data CTypeSpecifier a
   | CFloatNType Int Bool a           -- ^ IEC 60227: width (32,64,128), extended flag
   | CSUType      (CStructureUnion a) a      -- ^ Struct or Union specifier
   | CEnumType    (CEnumeration a)    a      -- ^ Enumeration specifier
-  | CTypeDef     Ident        a      -- ^ Typedef name
+  | CTypeDef     (Identifier a)       a      -- ^ Typedef name
   | CTypeOfExpr  (CExpression a)  a  -- ^ @typeof(expr)@
   | CTypeOfType  (CDeclaration a) a  -- ^ @typeof(type)@
   | CAtomicType  (CDeclaration a) a  -- ^ @_Atomic(type)@
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CTypeSpecifier a)
 
@@ -501,7 +481,7 @@ data CTypeQualifier a
   | CNonnullQual a
   | CClRdOnlyQual a
   | CClWrOnlyQual a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CTypeQualifier a)
 
@@ -512,7 +492,7 @@ type CFunSpec = CFunctionSpecifier NodeInfo
 data CFunctionSpecifier a
   = CInlineQual a
   | CNoreturnQual a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CFunctionSpecifier a)
 
@@ -522,7 +502,7 @@ type CAlignSpec = CAlignmentSpecifier NodeInfo
 data CAlignmentSpecifier a
   = CAlignAsType (CDeclaration a) a  -- ^ @_Alignas(type)@
   | CAlignAsExpr (CExpression a) a   -- ^ @_Alignas(expr)@
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAlignmentSpecifier a)
 
@@ -540,11 +520,11 @@ type CStructUnion = CStructureUnion NodeInfo
 data CStructureUnion a
   = CStruct
     CStructTag
-    (Maybe Ident)
+    (Maybe (Identifier a))
     (Maybe [CDeclaration a])  -- member declarations
     [CAttribute a]            -- __attribute__s
     a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CStructureUnion a)
 
@@ -554,6 +534,15 @@ data CStructTag = CStructTag
                 deriving (Show, Eq,Data,Typeable, Generic)
 
 instance NFData CStructTag
+
+type CEnumVar = CEnumVariant NodeInfo
+data CEnumVariant a = 
+  CEnumVar 
+    (Identifier a) -- variant name
+    (Maybe (CExpression a)) -- explicit variant value
+  deriving (Show, Data, Typeable, Generic, Generic1, Functor)
+
+instance NFData a => NFData (CEnumVariant a)
 
 -- | C enumeration specifier (K&R A8.4, C99 6.7.2.2)
 --
@@ -570,12 +559,11 @@ instance NFData CStructTag
 type CEnum = CEnumeration NodeInfo
 data CEnumeration a
   = CEnum
-    (Maybe Ident)
-    (Maybe [(Ident,                   -- variant name
-             Maybe (CExpression a))]) -- explicit variant value
+    (Maybe (Identifier a))
+    (Maybe [CEnumVariant a]) 
     [CAttribute a]                    -- __attribute__s
     a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CEnumeration a)
 
@@ -590,16 +578,9 @@ data CInitializer a
   = CInitExpr (CExpression a) a
   -- | initialization list (see 'CInitList')
   | CInitList (CInitializerList a) a
-    deriving (Show, Data,Typeable, Generic {-! ,CNode , Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CInitializer a)
-
--- deriving Functor does not work (type synonym)
-instance Functor CInitializer where
-        fmap _f (CInitExpr a1 a2) = CInitExpr (fmap _f a1) (_f a2)
-        fmap _f (CInitList a1 a2) = CInitList (fmapInitList _f a1) (_f a2)
-fmapInitList :: (a->b) -> (CInitializerList a) -> (CInitializerList b)
-fmapInitList _f = map (\(desigs, initializer) -> (fmap (fmap _f) desigs, fmap _f initializer))
 
 -- | Initializer List
 --
@@ -628,7 +609,10 @@ fmapInitList _f = map (\(desigs, initializer) -> (fmap (fmap _f) desigs, fmap _f
 -- >                          ]
 -- > in  CInitList [(CMemberDesig "s", init_s)]
 type CInitList = CInitializerList NodeInfo
-type CInitializerList a = [([CPartDesignator a], CInitializer a)]
+newtype CInitializerList a = CInitializerList [([CPartDesignator a], CInitializer a)]
+  deriving (Show, Data, Typeable, Generic, Functor)
+
+instance NFData a => NFData (CInitializerList a)
 
 -- | Designators
 --
@@ -639,10 +623,10 @@ data CPartDesignator a
   -- | array position designator
   = CArrDesig     (CExpression a) a
   -- | member designator
-  | CMemberDesig  Ident a
+  | CMemberDesig  (Identifier a) a
   -- | array range designator @CRangeDesig from to _@ (GNU C)
   | CRangeDesig (CExpression a) (CExpression a) a
-    deriving (Show, Data,Typeable, Generic {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CPartDesignator a)
 
@@ -651,8 +635,8 @@ instance NFData a => NFData (CPartDesignator a)
 -- Those are of the form @CAttr attribute-name attribute-parameters@,
 -- and serve as generic properties of some syntax tree elements.
 type CAttr = CAttribute NodeInfo
-data CAttribute a = CAttr Ident [CExpression a] a
-                    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+data CAttribute a = CAttr (Identifier a) [CExpression a] a
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CAttribute a)
 
@@ -704,56 +688,30 @@ data CExpression a
                  [CExpression a]         -- arguments
                  a
   | CMember      (CExpression a)         -- structure
-                 Ident                   -- member name
+                 (Identifier a)                   -- member name
                  Bool                    -- deref structure? (True for `->')
                  a
-  | CVar         Ident                   -- identifier (incl. enumeration const)
+  | CVar         (Identifier a)              -- identifier (incl. enumeration const)
                  a
   | CConst       (CConstant a)           -- ^ integer, character, floating point and string constants
   | CCompoundLit (CDeclaration a)
                  (CInitializerList a)    -- type name & initialiser list
                  a                       -- ^ C99 compound literal
-  | CGenericSelection (CExpression a) [(Maybe (CDeclaration a), CExpression a)] a -- ^ C11 generic selection
+  | CGenericSelection (CExpression a) [CGenericSelector a] a -- ^ C11 generic selection
   | CStatExpr    (CStatement a) a        -- ^ GNU C compound statement as expr
-  | CLabAddrExpr Ident a                 -- ^ GNU C address of label
+  | CLabAddrExpr (Identifier a) a            -- ^ GNU C address of label
   | CBuiltinExpr (CBuiltinThing a)       -- ^ builtin expressions, see 'CBuiltin'
-    deriving (Data,Typeable,Show, Generic {-! ,CNode , Annotated !-})
+    deriving (Data,Typeable, Show, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
 
 instance NFData a => NFData (CExpression a)
 
--- deriving Functor does not work (type synonyms)
-instance Functor CExpression where
-        fmap _f (CComma a1 a2) = CComma (fmap (fmap _f) a1) (_f a2)
-        fmap _f (CAssign a1 a2 a3 a4)
-          = CAssign a1 (fmap _f a2) (fmap _f a3) (_f a4)
-        fmap _f (CCond a1 a2 a3 a4)
-          = CCond (fmap _f a1) (fmap (fmap _f) a2) (fmap _f a3) (_f a4)
-        fmap _f (CBinary a1 a2 a3 a4)
-          = CBinary a1 (fmap _f a2) (fmap _f a3) (_f a4)
-        fmap _f (CCast a1 a2 a3) = CCast (fmap _f a1) (fmap _f a2) (_f a3)
-        fmap _f (CUnary a1 a2 a3) = CUnary a1 (fmap _f a2) (_f a3)
-        fmap _f (CSizeofExpr a1 a2) = CSizeofExpr (fmap _f a1) (_f a2)
-        fmap _f (CSizeofType a1 a2) = CSizeofType (fmap _f a1) (_f a2)
-        fmap _f (CAlignofExpr a1 a2) = CAlignofExpr (fmap _f a1) (_f a2)
-        fmap _f (CAlignofType a1 a2) = CAlignofType (fmap _f a1) (_f a2)
-        fmap _f (CComplexReal a1 a2) = CComplexReal (fmap _f a1) (_f a2)
-        fmap _f (CComplexImag a1 a2) = CComplexImag (fmap _f a1) (_f a2)
-        fmap _f (CIndex a1 a2 a3)
-          = CIndex (fmap _f a1) (fmap _f a2) (_f a3)
-        fmap _f (CCall a1 a2 a3)
-          = CCall (fmap _f a1) (fmap (fmap _f) a2) (_f a3)
-        fmap _f (CMember a1 a2 a3 a4) = CMember (fmap _f a1) a2 a3 (_f a4)
-        fmap _f (CVar a1 a2) = CVar a1 (_f a2)
-        fmap _f (CConst a1) = CConst (fmap _f a1)
-        fmap _f (CCompoundLit a1 a2 a3)
-          = CCompoundLit (fmap _f a1) (fmapInitList _f a2) (_f a3)
-        fmap _f (CStatExpr a1 a2) = CStatExpr (fmap _f a1) (_f a2)
-        fmap _f (CLabAddrExpr a1 a2) = CLabAddrExpr a1 (_f a2)
-        fmap _f (CBuiltinExpr a1) = CBuiltinExpr (fmap _f a1)
-        fmap _f (CGenericSelection expr list annot) =
-          CGenericSelection (fmap _f expr) (map fmap_helper list) (_f annot)
-          where
-            fmap_helper (ma1, a2) = (fmap (fmap _f) ma1, fmap _f a2)
+data CGenericSelector a = CGenericSelector
+  (Maybe (CDeclaration a)) 
+  (CExpression a)
+  deriving (Data,Typeable,Show, Generic, Generic1, Functor {-! ,CNode , Annotated !-})
+
+instance NFData a => NFData (CGenericSelector a)
+
 
 -- | GNU Builtins, which cannot be typed in C99
 type CBuiltin = CBuiltinThing NodeInfo
@@ -762,7 +720,7 @@ data CBuiltinThing a
   | CBuiltinOffsetOf (CDeclaration a) [CPartDesignator a] a -- ^ @(type, designator-list)@
   | CBuiltinTypesCompatible (CDeclaration a) (CDeclaration a) a  -- ^ @(type,type)@
   | CBuiltinConvertVector (CExpression a) (CDeclaration a) a -- ^ @(expr, type)@
-    deriving (Show, Data,Typeable, Generic {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CBuiltinThing a)
 
@@ -773,14 +731,14 @@ data CConstant a
   | CCharConst  CChar a
   | CFloatConst CFloat a
   | CStrConst   CString a
-    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CConstant a)
 
 -- | Attributed string literals
 type CStrLit = CStringLiteral NodeInfo
 data CStringLiteral a = CStrLit CString a
-            deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+    deriving (Show, Data,Typeable, Generic, Generic1, Functor {-! ,CNode ,Annotated !-})
 
 instance NFData a => NFData (CStringLiteral a)
 
@@ -814,10 +772,6 @@ instance CNode t1 => CNode (CTranslationUnit t1) where
 instance CNode t1 => Pos (CTranslationUnit t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CTranslationUnit where
-        fmap _f (CTranslUnit a1 a2)
-          = CTranslUnit (fmap (fmap _f) a1) (_f a2)
-
 instance Annotated CTranslationUnit where
         annotation (CTranslUnit _ n) = n
         amap f (CTranslUnit a_1 a_2) = CTranslUnit a_1 (f a_2)
@@ -828,11 +782,6 @@ instance CNode t1 => CNode (CExternalDeclaration t1) where
         nodeInfo (CAsmExt _ n) = nodeInfo n
 instance CNode t1 => Pos (CExternalDeclaration t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CExternalDeclaration where
-        fmap _f (CDeclExt a1) = CDeclExt (fmap _f a1)
-        fmap _f (CFDefExt a1) = CFDefExt (fmap _f a1)
-        fmap _f (CAsmExt a1 a2) = CAsmExt (fmap _f a1) (_f a2)
 
 instance Annotated CExternalDeclaration where
         annotation (CDeclExt n) = annotation n
@@ -846,12 +795,6 @@ instance CNode t1 => CNode (CFunctionDef t1) where
         nodeInfo (CFunDef _ _ _ _ n) = nodeInfo n
 instance CNode t1 => Pos (CFunctionDef t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CFunctionDef where
-        fmap _f (CFunDef a1 a2 a3 a4 a5)
-          = CFunDef (fmap (fmap _f) a1) (fmap _f a2) (fmap (fmap _f) a3)
-              (fmap _f a4)
-              (_f a5)
 
 instance Annotated CFunctionDef where
         annotation (CFunDef _ _ _ _ n) = n
@@ -875,12 +818,6 @@ instance CNode t1 => CNode (CDeclarator t1) where
 instance CNode t1 => Pos (CDeclarator t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CDeclarator where
-        fmap _f (CDeclr a1 a2 a3 a4 a5)
-          = CDeclr a1 (fmap (fmap _f) a2) (fmap (fmap _f) a3)
-              (fmap (fmap _f) a4)
-              (_f a5)
-
 instance Annotated CDeclarator where
         annotation (CDeclr _ _ _ _ n) = n
         amap f (CDeclr a_1 a_2 a_3 a_4 a_5)
@@ -900,10 +837,6 @@ instance Annotated CDerivedDeclarator where
         amap f (CPtrDeclr a_1 a_2) = CPtrDeclr a_1 (f a_2)
         amap f (CArrDeclr a_1 a_2 a_3) = CArrDeclr a_1 a_2 (f a_3)
         amap f (CFunDeclr a_1 a_2 a_3) = CFunDeclr a_1 a_2 (f a_3)
-
-instance Functor CArraySize where
-        fmap _ (CNoArrSize a1) = CNoArrSize a1
-        fmap _f (CArrSize a1 a2) = CArrSize a1 (fmap _f a2)
 
 instance CNode t1 => CNode (CStatement t1) where
         nodeInfo (CLabel _ _ _ n) = nodeInfo n
@@ -964,13 +897,6 @@ instance CNode t1 => CNode (CAssemblyStatement t1) where
 instance CNode t1 => Pos (CAssemblyStatement t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CAssemblyStatement where
-        fmap _f (CAsmStmt a1 a2 a3 a4 a5 a6)
-          = CAsmStmt (fmap (fmap _f) a1) (fmap _f a2) (fmap (fmap _f) a3)
-              (fmap (fmap _f) a4)
-              (fmap (fmap _f) a5)
-              (_f a6)
-
 instance Annotated CAssemblyStatement where
         annotation (CAsmStmt _ _ _ _ _ n) = n
         amap f (CAsmStmt a_1 a_2 a_3 a_4 a_5 a_6)
@@ -980,10 +906,6 @@ instance CNode t1 => CNode (CAssemblyOperand t1) where
         nodeInfo (CAsmOperand _ _ _ n) = nodeInfo n
 instance CNode t1 => Pos (CAssemblyOperand t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CAssemblyOperand where
-        fmap _f (CAsmOperand a1 a2 a3 a4)
-          = CAsmOperand a1 (fmap _f a2) (fmap _f a3) (_f a4)
 
 instance Annotated CAssemblyOperand where
         annotation (CAsmOperand _ _ _ n) = n
@@ -996,11 +918,6 @@ instance CNode t1 => CNode (CCompoundBlockItem t1) where
         nodeInfo (CNestedFunDef d) = nodeInfo d
 instance CNode t1 => Pos (CCompoundBlockItem t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CCompoundBlockItem where
-        fmap _f (CBlockStmt a1) = CBlockStmt (fmap _f a1)
-        fmap _f (CBlockDecl a1) = CBlockDecl (fmap _f a1)
-        fmap _f (CNestedFunDef a1) = CNestedFunDef (fmap _f a1)
 
 instance Annotated CCompoundBlockItem where
         annotation (CBlockStmt n) = annotation n
@@ -1018,13 +935,6 @@ instance CNode t1 => CNode (CDeclarationSpecifier t1) where
         nodeInfo (CAlignSpec d) = nodeInfo d
 instance CNode t1 => Pos (CDeclarationSpecifier t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CDeclarationSpecifier where
-        fmap _f (CStorageSpec a1) = CStorageSpec (fmap _f a1)
-        fmap _f (CTypeSpec a1) = CTypeSpec (fmap _f a1)
-        fmap _f (CTypeQual a1) = CTypeQual (fmap _f a1)
-        fmap _f (CFunSpec a1) = CFunSpec (fmap _f a1)
-        fmap _f (CAlignSpec a1) = CAlignSpec (fmap _f a1)
 
 instance Annotated CDeclarationSpecifier where
         annotation (CStorageSpec n) = annotation n
@@ -1050,17 +960,6 @@ instance CNode t1 => CNode (CStorageSpecifier t1) where
         nodeInfo (CClLocal d) = nodeInfo d
 instance CNode t1 => Pos (CStorageSpecifier t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CStorageSpecifier where
-        fmap _f (CAuto a1) = CAuto (_f a1)
-        fmap _f (CRegister a1) = CRegister (_f a1)
-        fmap _f (CStatic a1) = CStatic (_f a1)
-        fmap _f (CExtern a1) = CExtern (_f a1)
-        fmap _f (CTypedef a1) = CTypedef (_f a1)
-        fmap _f (CThread a1) = CThread (_f a1)
-        fmap _f (CClKernel a1) = CClKernel (_f a1)
-        fmap _f (CClGlobal a1) = CClGlobal (_f a1)
-        fmap _f (CClLocal a1) = CClLocal (_f a1)
 
 instance Annotated CStorageSpecifier where
         annotation (CAuto n) = n
@@ -1104,27 +1003,6 @@ instance CNode t1 => CNode (CTypeSpecifier t1) where
         nodeInfo (CAtomicType _ n) = nodeInfo n
 instance CNode t1 => Pos (CTypeSpecifier t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CTypeSpecifier where
-        fmap _f (CVoidType a1) = CVoidType (_f a1)
-        fmap _f (CCharType a1) = CCharType (_f a1)
-        fmap _f (CShortType a1) = CShortType (_f a1)
-        fmap _f (CIntType a1) = CIntType (_f a1)
-        fmap _f (CLongType a1) = CLongType (_f a1)
-        fmap _f (CFloatType a1) = CFloatType (_f a1)
-        fmap _f (CFloatNType n x a1) = CFloatNType n x (_f a1)
-        fmap _f (CDoubleType a1) = CDoubleType (_f a1)
-        fmap _f (CSignedType a1) = CSignedType (_f a1)
-        fmap _f (CUnsigType a1) = CUnsigType (_f a1)
-        fmap _f (CBoolType a1) = CBoolType (_f a1)
-        fmap _f (CComplexType a1) = CComplexType (_f a1)
-        fmap _f (CInt128Type a1) = CInt128Type (_f a1)
-        fmap _f (CSUType a1 a2) = CSUType (fmap _f a1) (_f a2)
-        fmap _f (CEnumType a1 a2) = CEnumType (fmap _f a1) (_f a2)
-        fmap _f (CTypeDef a1 a2) = CTypeDef a1 (_f a2)
-        fmap _f (CTypeOfExpr a1 a2) = CTypeOfExpr (fmap _f a1) (_f a2)
-        fmap _f (CTypeOfType a1 a2) = CTypeOfType (fmap _f a1) (_f a2)
-        fmap _f (CAtomicType a1 a2) = CAtomicType (fmap _f a1) (_f a2)
 
 instance Annotated CTypeSpecifier where
         annotation (CVoidType n) = n
@@ -1180,17 +1058,6 @@ instance CNode t1 => CNode (CTypeQualifier t1) where
 instance CNode t1 => Pos (CTypeQualifier t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CTypeQualifier where
-        fmap _f (CConstQual a1) = CConstQual (_f a1)
-        fmap _f (CVolatQual a1) = CVolatQual (_f a1)
-        fmap _f (CRestrQual a1) = CRestrQual (_f a1)
-        fmap _f (CAtomicQual a1) = CAtomicQual (_f a1)
-        fmap _f (CAttrQual a1) = CAttrQual (fmap _f a1)
-        fmap _f (CNullableQual a1) = CNullableQual (_f a1)
-        fmap _f (CNonnullQual a1) = CNonnullQual (_f a1)
-        fmap _f (CClRdOnlyQual a1) = CClRdOnlyQual (_f a1)
-        fmap _f (CClWrOnlyQual a1) = CClWrOnlyQual (_f a1)
-
 instance Annotated CTypeQualifier where
         annotation (CConstQual n) = n
         annotation (CVolatQual n) = n
@@ -1217,10 +1084,6 @@ instance CNode t1 => CNode (CFunctionSpecifier t1) where
 instance CNode t1 => Pos (CFunctionSpecifier t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CFunctionSpecifier where
-        fmap _f (CInlineQual a1) = CInlineQual (_f a1)
-        fmap _f (CNoreturnQual a1) = CNoreturnQual (_f a1)
-
 instance Annotated CFunctionSpecifier where
         annotation (CInlineQual n) = n
         annotation (CNoreturnQual n) = n
@@ -1233,10 +1096,6 @@ instance CNode t1 => CNode (CAlignmentSpecifier t1) where
 instance CNode t1 => Pos (CAlignmentSpecifier t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CAlignmentSpecifier where
-        fmap _f (CAlignAsType a1 a2) = CAlignAsType (fmap _f a1) (_f a2)
-        fmap _f (CAlignAsExpr a1 a2) = CAlignAsExpr (fmap _f a1) (_f a2)
-
 instance Annotated CAlignmentSpecifier where
         annotation (CAlignAsType _ n) = n
         annotation (CAlignAsExpr _ n) = n
@@ -1248,11 +1107,6 @@ instance CNode t1 => CNode (CStructureUnion t1) where
 instance CNode t1 => Pos (CStructureUnion t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CStructureUnion where
-        fmap _f (CStruct a1 a2 a3 a4 a5)
-          = CStruct a1 a2 (fmap (fmap (fmap _f)) a3) (fmap (fmap _f) a4)
-              (_f a5)
-
 instance Annotated CStructureUnion where
         annotation (CStruct _ _ _ _ n) = n
         amap f (CStruct a_1 a_2 a_3 a_4 a_5)
@@ -1262,12 +1116,6 @@ instance CNode t1 => CNode (CEnumeration t1) where
         nodeInfo (CEnum _ _ _ n) = nodeInfo n
 instance CNode t1 => Pos (CEnumeration t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CEnumeration where
-        fmap _f (CEnum a1 a2 a3 a4)
-          = CEnum a1 (fmap (fmap (fmap (fmap (fmap _f)))) a2)
-              (fmap (fmap _f) a3)
-              (_f a4)
 
 instance Annotated CEnumeration where
         annotation (CEnum _ _ _ n) = n
@@ -1292,12 +1140,6 @@ instance CNode t1 => CNode (CPartDesignator t1) where
 instance CNode t1 => Pos (CPartDesignator t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CPartDesignator where
-        fmap _f (CArrDesig a1 a2) = CArrDesig (fmap _f a1) (_f a2)
-        fmap _f (CMemberDesig a1 a2) = CMemberDesig a1 (_f a2)
-        fmap _f (CRangeDesig a1 a2 a3)
-          = CRangeDesig (fmap _f a1) (fmap _f a2) (_f a3)
-
 instance Annotated CPartDesignator where
         annotation (CArrDesig _ n) = n
         annotation (CMemberDesig _ n) = n
@@ -1310,9 +1152,6 @@ instance CNode t1 => CNode (CAttribute t1) where
         nodeInfo (CAttr _ _ n) = nodeInfo n
 instance CNode t1 => Pos (CAttribute t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CAttribute where
-        fmap _f (CAttr a1 a2 a3) = CAttr a1 (fmap (fmap _f) a2) (_f a3)
 
 instance Annotated CAttribute where
         annotation (CAttr _ _ n) = n
@@ -1399,16 +1238,6 @@ instance CNode t1 => CNode (CBuiltinThing t1) where
 instance CNode t1 => Pos (CBuiltinThing t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CBuiltinThing where
-        fmap _f (CBuiltinVaArg a1 a2 a3)
-          = CBuiltinVaArg (fmap _f a1) (fmap _f a2) (_f a3)
-        fmap _f (CBuiltinOffsetOf a1 a2 a3)
-          = CBuiltinOffsetOf (fmap _f a1) (fmap (fmap _f) a2) (_f a3)
-        fmap _f (CBuiltinTypesCompatible a1 a2 a3)
-          = CBuiltinTypesCompatible (fmap _f a1) (fmap _f a2) (_f a3)
-        fmap _f (CBuiltinConvertVector a1 a2 a3)
-          = CBuiltinConvertVector (fmap _f a1) (fmap _f a2) (_f a3)
-
 instance Annotated CBuiltinThing where
         annotation (CBuiltinVaArg _ _ n) = n
         annotation (CBuiltinOffsetOf _ _ n) = n
@@ -1430,12 +1259,6 @@ instance CNode t1 => CNode (CConstant t1) where
 instance CNode t1 => Pos (CConstant t1) where
         posOf x = posOf (nodeInfo x)
 
-instance Functor CConstant where
-        fmap _f (CIntConst a1 a2) = CIntConst a1 (_f a2)
-        fmap _f (CCharConst a1 a2) = CCharConst a1 (_f a2)
-        fmap _f (CFloatConst a1 a2) = CFloatConst a1 (_f a2)
-        fmap _f (CStrConst a1 a2) = CStrConst a1 (_f a2)
-
 instance Annotated CConstant where
         annotation (CIntConst _ n) = n
         annotation (CCharConst _ n) = n
@@ -1450,9 +1273,6 @@ instance CNode t1 => CNode (CStringLiteral t1) where
         nodeInfo (CStrLit _ n) = nodeInfo n
 instance CNode t1 => Pos (CStringLiteral t1) where
         posOf x = posOf (nodeInfo x)
-
-instance Functor CStringLiteral where
-        fmap _f (CStrLit a1 a2) = CStrLit a1 (_f a2)
 
 instance Annotated CStringLiteral where
         annotation (CStrLit _ n) = n

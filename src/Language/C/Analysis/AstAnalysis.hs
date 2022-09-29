@@ -133,10 +133,10 @@ analyseDecl is_local decl@(CDecl declspecs declrs node)
 
     analyseTyDef declspecs' handle_sue_def declr =
         case declr of
-            (Just tydeclr, Nothing , Nothing) -> analyseTypeDef handle_sue_def declspecs' tydeclr node
+            CDeclI tydeclr -> analyseTypeDef handle_sue_def declspecs' tydeclr node
             _ -> astError node "bad typdef declaration: bitfieldsize or initializer present"
 
-    analyseVarDeclr specs handle_sue_def (Just declr, init_opt, Nothing) = do
+    analyseVarDeclr specs handle_sue_def (CDeclarationItem (Just declr) init_opt Nothing) = do
         -- analyse the declarator
         let (storage_specs, attrs, typequals, canonTySpecs, inline) = specs
         vardeclInfo@(VarDeclInfo _ _ _ _ typ _) <-
@@ -151,8 +151,8 @@ analyseDecl is_local decl@(CDecl declspecs declrs node)
                  vardeclInfo init_opt
         _init_opt' <- mapMaybeM init_opt (tInit typ)
         return ()
-    analyseVarDeclr _ _ (Nothing,_,_)         = astError node "abstract declarator in object declaration"
-    analyseVarDeclr _ _ (_,_,Just _bitfieldSz) = astError node "bitfield size in object declaration"
+    analyseVarDeclr _ _ (CDeclarationItem Nothing _ _)            = astError node "abstract declarator in object declaration"
+    analyseVarDeclr _ _ (CDeclarationItem _ _ (Just _bitfieldSz)) = astError node "bitfield size in object declaration"
 
 -- | Analyse a typedef
 analyseTypeDef :: (MonadTrav m) => Bool -> [CDeclSpec] -> CDeclr -> NodeInfo -> m ()
@@ -397,7 +397,9 @@ tStmt c (CDefault s ni)          =
      tStmt c s
 tStmt c (CFor i g inc s _)       =
   do enterBlockScope
-     either (maybe (return ()) checkExpr) (analyseDecl True) i
+     case i of 
+        CForDecl d -> analyseDecl True d
+        CForInitializing i -> maybe (return ()) checkExpr i
      maybe (return ()) (checkGuard c) g
      maybe (return ()) checkExpr inc
      _ <- tStmt (LoopCtx : c) s
@@ -588,7 +590,7 @@ tExpr' ctx side (CGenericSelection expr list ni) = do
       Nothing -> astError ni ("no clause matches for generic selection (not fully supported) - selector type is " ++ show (pretty ty_sel) ++
                               ", available types are " ++ show (map (pretty.fromJust.fst) (filter (isJust.fst) ty_list)))
   where
-    analyseAssoc (mdecl,expr') = do
+    analyseAssoc (CGenericSelector mdecl expr') = do
       tDecl <- mapM analyseTypeDecl mdecl
       tExpr'' <- tExpr ctx side expr'
       return (tDecl, tExpr'')
@@ -688,7 +690,7 @@ tExpr' c _ (CStatExpr s _)             =
 
 tInitList :: MonadTrav m => NodeInfo -> Type -> CInitList -> m ()
 tInitList _ (ArrayType (DirectType (TyIntegral TyChar) _ _) _ _ _)
-              [([], CInitExpr e@(CConst (CStrConst _ _)) _)] =
+              (CInitializerList [([], CInitExpr e@(CConst (CStrConst _ _)) _)]) =
   tExpr [] RValue e >> return ()
 tInitList ni t@(ArrayType _ _ _ _) initList =
   do let default_ds =
@@ -701,12 +703,12 @@ tInitList ni t@(DirectType (TyComp ctr) _ _) initList =
      checkInits t default_ds initList
 tInitList _ (PtrType (DirectType TyVoid _ _) _ _ ) _ =
           return () -- XXX: more checking
-tInitList _ t [([], i)] = voidM$ tInit t i
+tInitList _ t (CInitializerList [([], i)]) = voidM$ tInit t i
 tInitList ni t _ = typeError ni $ "initializer list for type: " ++ pType t
 
 checkInits :: MonadTrav m => Type -> [CDesignator] -> CInitList -> m ()
-checkInits _ _ [] = return ()
-checkInits t dds ((ds, i) : is) =
+checkInits _ _ (CInitializerList []) = return ()
+checkInits t dds (CInitializerList ((ds, i) : is)) =
   do (dds', ds') <- case (dds, ds) of
                       ([], []) ->
                         typeError (nodeInfo i) "excess elements in initializer"
@@ -714,7 +716,7 @@ checkInits t dds ((ds, i) : is) =
                       (_, d : _) -> return (advanceDesigList dds d, ds)
      t' <- tDesignator t ds'
      _ <- tInit t' i
-     checkInits t dds' is
+     checkInits t dds' (CInitializerList is)
 
 advanceDesigList :: [CDesignator] -> CDesignator -> [CDesignator]
 advanceDesigList ds d = drop 1 $ dropWhile (not . matchDesignator d) ds

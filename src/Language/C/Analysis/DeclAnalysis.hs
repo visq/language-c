@@ -64,7 +64,7 @@ tParamDecl (CDecl declspecs declrs node) =
   getParamDeclr =
       case declrs of
           [] -> return (emptyDeclr node)
-          [(Just declr,Nothing,Nothing)] -> return declr
+          [CDeclI declr] -> return declr
           _ -> astError node "bad parameter declaration: multiple decls / bitfield or initializer present"
   mkParamDecl name storage attrs ty declr_node =
     let vd = VarDecl name (DeclAttrs noFunctionAttrs storage attrs) ty in
@@ -102,7 +102,7 @@ tMemberDecls (CDecl declspecs [] node) =
 -- Named members
 tMemberDecls (CDecl declspecs declrs node) = zipWithM tMemberDecl (True:repeat False) declrs
     where
-    tMemberDecl handle_sue_def (Just member_declr,Nothing,bit_field_size_opt) =
+    tMemberDecl handle_sue_def (CDeclarationItem (Just member_declr) Nothing bit_field_size_opt) =
         -- TODO: use analyseVarDecl here, not analyseVarDecl'
         do var_decl <- analyseVarDecl' handle_sue_def declspecs member_declr [] Nothing
            let (VarDeclInfo name fun_spec storage_spec attrs ty _node_info) = var_decl
@@ -110,7 +110,7 @@ tMemberDecls (CDecl declspecs declrs node) = zipWithM tMemberDecl (True:repeat F
            checkValidMemberSpec fun_spec storage_spec
            return $ MemberDecl (VarDecl name (DeclAttrs noFunctionAttrs NoStorage attrs) ty)
                                bit_field_size_opt node
-    tMemberDecl handle_sue_def (Nothing,Nothing,Just bit_field_size) =
+    tMemberDecl handle_sue_def (CDeclarationItem Nothing Nothing (Just bit_field_size)) =
         do let (storage_specs, _attrs, typequals, typespecs, _funspecs, _alignspecs) = partitionDeclSpecs declspecs
            -- TODO: funspecs/alignspecs not yet processed
            _storage_spec  <- canonicalStorageSpec storage_specs
@@ -198,7 +198,7 @@ analyseTypeDecl (CStaticAssert _ _ node) =
   astError node "Expected type declaration, found static assert"
 analyseTypeDecl (CDecl declspecs declrs node)
     | [] <- declrs = analyseTyDeclr (emptyDeclr node)
-    | [(Just declr,Nothing,Nothing)] <- declrs = analyseTyDeclr declr
+    | [CDeclI declr] <- declrs = analyseTyDeclr declr
     | otherwise = astError node "Bad declarator for type declaration"
     where
     analyseTyDeclr (CDeclr Nothing derived_declrs Nothing attrs _declrnode)
@@ -227,9 +227,9 @@ tType handle_sue_def top_node typequals canonTySpecs derived_declrs oldstyle_par
         buildType dds >>= buildPointerType ptrquals node
     buildType (CArrDeclr arrquals size node : dds)
         = buildType dds >>= buildArrayType arrquals size node
-    buildType (CFunDeclr (Right (params, isVariadic)) attrs node : dds)
+    buildType (CFunDeclr (CFunParamsNew params isVariadic) attrs node : dds)
         = buildType dds >>= (liftM  (uncurry FunctionType) . buildFunctionType params isVariadic attrs node)
-    buildType (CFunDeclr (Left _) _ _ : _)
+    buildType (CFunDeclr (CFunParamsOld _) _ _ : _)
         -- /FIXME/: this is really an internal error, not an AST error.
         = astError top_node "old-style parameters remaining after mergeOldStyle"
     buildPointerType ptrquals _node inner_ty
@@ -350,14 +350,14 @@ tEnumTypeDecl handle_def (CEnum ident_opt enumerators_opt attrs node_info)
 
 -- | translate and analyse an enumeration type
 tEnumType :: (MonadCError m, MonadSymtab m) =>
-             SUERef -> [(Ident, Maybe CExpr)] -> Attributes -> NodeInfo -> m EnumType
+             SUERef -> [CEnumVar] -> Attributes -> NodeInfo -> m EnumType
 tEnumType sue_ref enumerators attrs node = do
     mapM_ handleEnumeratorDef enumerators'
     return ty
     where
     ty = EnumType sue_ref enumerators' attrs node
     (_,enumerators') = mapAccumL nextEnumerator (Left 0) enumerators
-    nextEnumerator memo (ident,e) =
+    nextEnumerator memo (CEnumVar ident e) =
       let (memo',expr) = nextEnrExpr memo e in
       (memo', Enumerator ident expr ty (nodeInfo ident))
     nextEnrExpr :: Either Integer (Expr,Integer) -> Maybe CExpr -> (Either Integer (Expr,Integer), CExpr)
@@ -522,7 +522,7 @@ mergeOldStyle :: (MonadCError m) => NodeInfo -> [CDecl] -> [CDerivedDeclr] -> m 
 mergeOldStyle _node [] declrs = return declrs
 mergeOldStyle node oldstyle_params (CFunDeclr params attrs fdnode : dds) =
     case params of
-        Left list -> do
+        CFunParamsOld list -> do
             -- FIXME: This translation doesn't work in the following example
             -- [| int f(b,a) struct x { }; int b,a; { struct x local; return local.x } |]
             oldstyle_params' <- liftM concat $ mapM splitCDecl oldstyle_params
@@ -530,8 +530,8 @@ mergeOldStyle node oldstyle_params (CFunDeclr params attrs fdnode : dds) =
             (newstyle_params,param_map') <- foldrM insertParamDecl ([],param_map) list
             unless (Map.null param_map') $
               astError node $ "declarations for parameter(s) "++ showParamMap param_map' ++" but no such parameter"
-            return (CFunDeclr (Right (newstyle_params, False)) attrs fdnode : dds)
-        Right _newstyle -> astError node "oldstyle parameter list, but newstyle function declaration"
+            return (CFunDeclr (CFunParamsNew newstyle_params False) attrs fdnode : dds)
+        CFunParamsNew _newstyle _ -> astError node "oldstyle parameter list, but newstyle function declaration"
     where
         attachNameOfDecl decl = nameOfDecl decl >>= \n -> return (n,decl)
         insertParamDecl param_name (ps, param_map)
@@ -540,7 +540,7 @@ mergeOldStyle node oldstyle_params (CFunDeclr params attrs fdnode : dds) =
                 Nothing -> return (implicitIntParam param_name : ps, param_map)
         implicitIntParam param_name =
             let nInfo = nodeInfo param_name in
-            CDecl [CTypeSpec (CIntType nInfo)] [(Just (CDeclr (Just param_name) [] Nothing [] nInfo),Nothing,Nothing)] nInfo
+            CDecl [CTypeSpec (CIntType nInfo)] [CDeclI (CDeclr (Just param_name) [] Nothing [] nInfo)] nInfo
         showParamMap = intercalate ", " . map identToString . Map.keys
 mergeOldStyle node _ _ = astError node "oldstyle parameter list, but not function type"
 
@@ -597,6 +597,6 @@ nameOfDecl d = getOnlyDeclr d >>= \declr ->
 emptyDeclr :: NodeInfo -> CDeclr
 emptyDeclr node = CDeclr Nothing [] Nothing [] node
 getOnlyDeclr :: (MonadCError m) => CDecl -> m CDeclr
-getOnlyDeclr (CDecl _ [(Just declr,_,_)] _) = return declr
+getOnlyDeclr (CDecl _ [CDeclarationItem (Just declr) _ _] _) = return declr
 getOnlyDeclr (CDecl _ _ _node) = internalErr "getOnlyDeclr: declaration doesn't have a unique declarator"
 getOnlyDeclr (CStaticAssert _ _ _) = internalErr "getOnlyDeclr: static assertion doesn't have a unique declarator"
