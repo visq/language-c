@@ -1127,12 +1127,8 @@ struct_or_union_specifier :: { CStructUnion }
 struct_or_union_specifier
   : struct_or_union attrs_opt identifier '{' struct_declaration_list  '}'
   	{% withNodeInfo $1 $ CStruct (unL $1) (Just $3) (Just$ RList.reverse $5) $2 }
-  | struct_or_union attrs_opt identifier '{' alignment_specifier struct_declaration_list '}'
-        {% withNodeInfo $1 $ CStruct (unL $1) (Just $3) (Just$ (Prelude.map (\(CDecl list list2 a) -> CDecl ((CAlignSpec $5) : list) list2 a) (RList.reverse $6))) $2 }
   | struct_or_union attrs_opt '{' struct_declaration_list  '}'
   	{% withNodeInfo $1 $ CStruct (unL $1) Nothing   (Just$ RList.reverse $4) $2 }
-  | struct_or_union attrs_opt '{' alignment_specifier struct_declaration_list '}'
-        {% withNodeInfo $1 $ CStruct (unL $1) Nothing (Just$ (Prelude.map (\(CDecl list list2 a) -> CDecl ((CAlignSpec $4) : list) list2 a) (RList.reverse $5))) $2 }
   | struct_or_union attrs_opt identifier
   	{% withNodeInfo $1 $ CStruct (unL $1) (Just $3) Nothing $2 }
 
@@ -1148,6 +1144,7 @@ struct_declaration_list
   : {- empty -}						{ RList.empty }
   | struct_declaration_list ';'				{ $1 }
   | struct_declaration_list struct_declaration		{ $1 `RList.snoc` $2 }
+  | struct_declaration_list alignment_specifier struct_declaration		{ $1 `RList.snoc` (let (CDecl list list2 a) = $3 in CDecl ((CAlignSpec $2) : list) list2 a ) }
 
 
 -- parse C structure declaration (C99 6.7.2.1)
