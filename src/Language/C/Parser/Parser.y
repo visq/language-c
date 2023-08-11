@@ -1143,8 +1143,8 @@ struct_declaration_list :: { Reversed [CDecl] }
 struct_declaration_list
   : {- empty -}						{ RList.empty }
   | struct_declaration_list ';'				{ $1 }
-  | struct_declaration_list struct_declaration		{ $1 `RList.snoc` $2 }
-  | struct_declaration_list alignment_specifier struct_declaration		{ $1 `RList.snoc` (let (CDecl list list2 a) = $3 in CDecl ((CAlignSpec $2) : list) list2 a ) }
+  | struct_declaration_list struct_declaration		{ $1 `RList.snoc` ( if ( containsAlign $1 ) then ( addAlign $2 ( getAlign $1 ) ) else $2 ) }
+  | struct_declaration_list alignment_specifier struct_declaration		{ $1 `RList.snoc` ( addAlign $3 $2 )}
 
 
 -- parse C structure declaration (C99 6.7.2.1)
@@ -2177,6 +2177,43 @@ attribute_params
   | attribute_params ',' unary_expression assignment_operator clang_version_literal { $1 }
 
 {
+
+containsAlign :: Reversed [CDecl] -> Bool
+containsAlign (Reversed input) = checkDecls input where
+	checkDecls :: [CDecl] -> Bool
+	checkDecls list = foldr (\x -> \y -> ( checkDecl x ) || y ) False list
+
+	checkDecl :: CDecl -> Bool
+	checkDecl ( CDecl list _ _ ) = checkList list
+
+	checkList :: [CDeclarationSpecifier NodeInfo] -> Bool
+	checkList [] = False
+	checkList ( ( CAlignSpec _ ) : tail ) = True
+	checkList ( _ : tail ) = checkList tail
+
+
+getAlign :: Reversed [CDecl] -> CAlignmentSpecifier NodeInfo
+getAlign ( Reversed input ) = getDecls input where
+	getDecls :: [CDecl] -> CAlignmentSpecifier NodeInfo
+	getDecls ( ( CDecl list _ _ ) : _ ) | listHasAlign list = getFromList list
+	getDecls ( _ : rest ) = getDecls rest
+
+	listHasAlign :: [CDeclarationSpecifier a] -> Bool
+	listHasAlign list = foldr ( \x -> \y -> ( declSpecHasAlign x ) || y ) False list
+
+	declSpecHasAlign :: CDeclarationSpecifier a -> Bool
+	declSpecHasAlign ( CAlignSpec _ ) = True
+	declSpecHasAlign _ = False
+
+	getFromList :: [CDeclarationSpecifier a ] -> CAlignmentSpecifier a
+	getFromList [] = error "Internal error: getAlign called on c declaration list with no alignment"
+	getFromList ( ( CAlignSpec x ) : _ ) = x
+	getFromList ( _ : rest ) = getFromList rest
+
+
+
+addAlign :: CDecl -> CAlignmentSpecifier NodeInfo -> CDecl
+addAlign ( CDecl list list2 a ) align = CDecl ( (CAlignSpec align) : list ) list2 a
 
 --  sometimes it is neccessary to reverse an unreversed list
 reverseList :: [a] -> Reversed [a]
