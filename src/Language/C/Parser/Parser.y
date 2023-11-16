@@ -257,6 +257,7 @@ tyident		{ CTokTyIdent _ $$ }		-- `typedef-name' identifier
 "__builtin_types_compatible_p"	{ CTokGnuC GnuCTyCompat _ }
 "__builtin_convertvector"	{ CTokClangC _ ClangBuiltinConvertVector }
 clangcversion   { CTokClangC _ (ClangCVersionTok $$) } -- Clang version literal
+"__builtin_bit_cast" { CTokClangC _ ClangCBitCast }
 "__kernel"	{ CTokClKernel	_ }             -- OpenCL kernel function
 "__read_only"	{ CTokClRdOnly	_ }             -- OpenCL read only qualifier
 "__write_only"	{ CTokClWrOnly	_ }             -- OpenCL write only qualifier
@@ -1770,7 +1771,10 @@ primary_expression
   	{% withNodeInfo $1 $ CBuiltinExpr . CBuiltinTypesCompatible $3 $5 }
 
   | "__builtin_convertvector" '(' assignment_expression ',' type_name ')'
-        {% withNodeInfo $1 $ CBuiltinExpr . CBuiltinConvertVector $3 $5 }
+    {% withNodeInfo $1 $ CBuiltinExpr . CBuiltinConvertVector $3 $5 }
+
+  | "__builtin_bit_cast" '(' type_name ',' assignment_expression ')'
+    {% withNodeInfo $1 $ CBuiltinExpr . CBuiltinBitCast $3 $5 }
 
 -- Generic Selection association list (C11 6.5.1.1)
 --

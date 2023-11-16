@@ -42,4 +42,5 @@ label __label__
 (CTokGnuC GnuCVaArg) __builtin_va_arg
 (CTokGnuC GnuCOffsetof) __builtin_offsetof
 (CTokGnuC GnuCTyCompat) __builtin_types_compatible_p
+(flip CTokClangC ClangCBitCast) __builtin_bit_cast
 (flip CTokClangC ClangBuiltinConvertVector) __builtin_convertvector

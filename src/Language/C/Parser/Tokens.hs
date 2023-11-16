@@ -163,6 +163,7 @@ data GnuCTok = GnuCAttrTok              -- `__attribute__'
 
 data ClangCTok = ClangCVersionTok !ClangCVersion -- version constant from 'availability' attribute
                | ClangBuiltinConvertVector
+               | ClangCBitCast                   -- `__builtin_bit_cast`
 
 instance Pos CToken where
   posOf = fst . posLenOfTok
@@ -395,6 +396,7 @@ instance Show CToken where
   showsPrec _ (CTokGnuC GnuCTyCompat _) = showString "__builtin_types_compatible_p"
   showsPrec _ (CTokClangC _ (ClangCVersionTok v)) = shows v
   showsPrec _ (CTokClangC _ ClangBuiltinConvertVector) = showString "__builtin_convertvector"
+  showsPrec _ (CTokClangC _ ClangCBitCast) = showString "__builtin_bit_cast"
   showsPrec _ (CTokClKernel _  ) = showString "__kernel"
   showsPrec _ (CTokClRdOnly _  ) = showString "__read_only"
   showsPrec _ (CTokClWrOnly _  ) = showString "__write_only"
