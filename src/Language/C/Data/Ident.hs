@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE FlexibleInstances #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Language.C.Data.Ident
@@ -15,7 +17,7 @@
 -- identifiers is based on the hash and does not follow the lexical order.
 -----------------------------------------------------------------------------
 module Language.C.Data.Ident (
-    Ident(..),
+    Identifier(..), Ident,
     SUERef(..), isAnonymousRef,
     mkIdent, builtinIdent, internalIdent, internalIdentAt, isInternalIdent,
     identToString, sueRefToString, dumpIdent)
@@ -30,7 +32,7 @@ import Language.C.Data.Node
 import Language.C.Data.Name (Name)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
-import GHC.Generics (Generic)
+import GHC.Generics (Generic, Generic1)
 import Control.DeepSeq (NFData)
 
 -- | References uniquely determining a struct, union or enum type.
@@ -47,29 +49,32 @@ isAnonymousRef :: SUERef -> Bool
 isAnonymousRef (AnonymousRef _) = True
 isAnonymousRef _ = False
 
--- | C identifiers
-data Ident = Ident String       -- lexeme
-                   {-# UNPACK #-}   !Int     -- hash to speed up equality check
-                   NodeInfo                   -- attributes of this ident. incl. position
-             deriving (Data,Typeable,Show, Generic) -- Read
+type Ident = Identifier NodeInfo
 
-instance NFData Ident
+-- | C identifiers
+data Identifier a = Ident String       -- lexeme
+                   {-# UNPACK #-}   !Int     -- hash to speed up equality check
+                   a                   -- attributes of this ident. incl. position
+             deriving (Data,Typeable,Show,Functor,Generic, Generic1) -- Read
+
+instance NFData a => NFData (Identifier a)
 
 -- the definition of the equality allows identifiers to be equal that are
 -- defined at different source text positions, and aims at speeding up the
 -- equality test, by comparing the lexemes only if the two numbers are equal
 --
-instance Eq Ident where
+instance Eq (Identifier a) where
   (Ident s h _) == (Ident s' h' _) = (h == h') && (s == s')
 
 -- this does *not* follow the alphanumerical ordering of the lexemes
 --
-instance Ord Ident where
+instance Ord (Identifier a) where
   compare (Ident s h _) (Ident s' h' _) = compare (h, s) (h', s')
 
 -- identifiers are attributed
 instance CNode Ident where
   nodeInfo (Ident _ _ at) = at
+
 instance Pos Ident where
   posOf = posOfNode . nodeInfo
 -- to speed up the equality test we compute some hash-like value for each
@@ -128,7 +133,7 @@ isInternalIdent :: Ident -> Bool
 isInternalIdent (Ident _ _ nodeinfo) = isInternalPos (posOfNode nodeinfo)
 
 -- | string of an identifier
-identToString               :: Ident -> String
+identToString               :: Ident-> String
 identToString (Ident s _ _)  = s
 
 -- | string of a SUE ref (empty if anonymous)

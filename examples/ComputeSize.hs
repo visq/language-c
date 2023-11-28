@@ -105,7 +105,7 @@ defineComp ty = CDeclExt (CDecl (map CTypeSpec (exportCompType $ derefTypeDefs t
     replaceEnum dty = dty
     
 defineTyDef :: (CompTypeRef, Ident) -> CExtDecl
-defineTyDef (ctr,tydef) = CDeclExt (CDecl specs [(Just$ CDeclr (Just tydef) [] Nothing [] undefNode, Nothing, Nothing)] undefNode)
+defineTyDef (ctr,tydef) = CDeclExt (CDecl specs [CDeclI $ CDeclr (Just tydef) [] Nothing [] undefNode] undefNode)
   where 
   specs = [CStorageSpec (CTypedef undefNode)] ++ map CTypeSpec (exportCompTypeDecl ctr)
 

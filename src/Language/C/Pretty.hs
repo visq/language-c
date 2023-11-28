@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, FlexibleContexts, LambdaCase #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Language.C.Pretty
@@ -23,7 +23,6 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import Debug.Trace {- for warnings -}
 import Prelude hiding ((<>))
-
 import Language.C.Data
 import Language.C.Syntax
 
@@ -145,7 +144,7 @@ instance Pretty CStat where
                $$ text "while" <+> text "(" <> pretty expr <> text ");"
     pretty (CFor for_init cond step stat _) =
         ii $ text "for" <+> text "("
-               <> either (maybeP pretty) pretty for_init <> semi
+               <> pretty for_init <> semi
                <+> maybeP pretty cond <> semi
                <+> maybeP pretty step <> text ")" $+$ prettyPrec (-1) stat
     pretty (CGoto ident _) = ii $ text "goto" <+> identP ident <> semi
@@ -160,6 +159,12 @@ instance Pretty CStat where
         in  if p == -1 then inner else ii inner
         where ppLblDecls =  vcat . map (\l -> text "__label__" <+> identP l <+> semi)
     prettyPrec _ p = pretty p
+
+instance Pretty (CForInit NodeInfo) where
+  pretty = \case 
+    CForDecl a -> pretty a 
+    CForInitializing a -> maybeP pretty a 
+
 
 instance Pretty CAsmStmt where
     pretty (CAsmStmt tyQual expr outOps inOps clobbers _) =
@@ -198,7 +203,7 @@ instance Pretty CDecl where
             where
             -- possible hint for AST improvement - (declr, initializer, expr, attrs)
             -- currently there are no sensible attributes for unnamed bitfields though
-            p (declr, initializer, expr) =
+            p (CDeclarationItem declr initializer expr) =
                 maybeP (prettyDeclr False 0) declr <+>
                 maybeP ((text ":" <+>) . pretty) expr <+>
                 attrlistP (getAttrs declr) <+>
@@ -301,7 +306,7 @@ instance Pretty CEnum where
         text "enum" <+> attrlistP cattrs <+> maybeP identP enum_ident <+> text "{",
         ii $ sep (punctuate comma (map p vals)),
         text "}"] where
-        p (ident, expr) = identP ident <+> maybeP ((text "=" <+>) . pretty) expr
+        p (CEnumVar ident expr) = identP ident <+> maybeP ((text "=" <+>) . pretty) expr
 
 --  Analyze a declarator and return a human-readable description
 --   See C99 Spec p 115ff.
@@ -356,10 +361,10 @@ prettyDeclr show_attrs prec (CDeclr name derived_declrs asmname cattrs _) =
     ppDeclr _ (CFunDeclr params fun_attrs _ : declrs) =
         (if not (null fun_attrs) then parens (attrlistP fun_attrs <+> ppDeclr 5 declrs) else ppDeclr 6 declrs)
         <> parens (prettyParams params)
-    prettyParams (Right (decls, isVariadic)) =
+    prettyParams (CFunParamsNew decls isVariadic) =
      sep (punctuate comma (map pretty decls))
      <> (if isVariadic then text "," <+> text "..." else empty)
-    prettyParams (Left oldStyleIds) =
+    prettyParams (CFunParamsOld oldStyleIds) =
      hsep (punctuate comma (map identP oldStyleIds))
     prettyAsmName asm_name_opt
         = maybe empty (\asm_name -> text "__asm__" <> parens (pretty asm_name)) asm_name_opt
@@ -372,7 +377,7 @@ instance Pretty CArrSize where
 --              | '{' (designation? initializer)_cs_list '}'
 instance Pretty CInit where
     pretty (CInitExpr expr _) = pretty expr
-    pretty (CInitList initl _) =
+    pretty (CInitList (CInitializerList initl) _) =
         text "{" <+> hsep (punctuate comma (map p initl)) <+> text "}" where
         p ([], initializer)     = pretty initializer
         p (desigs, initializer) = hsep (map pretty desigs) <+> text "=" <+> pretty initializer
@@ -440,7 +445,7 @@ instance Pretty CExpr where
                        <> text (if deref then "->" else ".") <> identP ident
     prettyPrec _p (CVar ident _) = identP ident
     prettyPrec _p (CConst constant) = pretty constant
-    prettyPrec _p (CCompoundLit decl initl _) =
+    prettyPrec _p (CCompoundLit decl (CInitializerList initl) _) =
         parens (pretty decl) <+> (braces . hsep . punctuate comma) (map p initl) where
         p ([], initializer)           = pretty initializer
         p (mems, initializer) = hcat (map pretty mems) <+> text "=" <+> pretty initializer
@@ -453,7 +458,7 @@ instance Pretty CExpr where
     prettyPrec _p (CGenericSelection expr assoc_list _) =
       text "_Generic" <> (parens.hsep.punctuate comma) (pretty expr : map pAssoc assoc_list)
       where
-        pAssoc (mty, expr1) = maybe (text "default") pretty mty <> text ":" <+> pretty expr1
+        pAssoc (CGenericSelector mty expr1) = maybe (text "default") pretty mty <> text ":" <+> pretty expr1
     prettyPrec _p (CBuiltinExpr builtin) = pretty builtin
 
 instance Pretty CBuiltin where

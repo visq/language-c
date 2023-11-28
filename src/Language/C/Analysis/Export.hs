@@ -51,7 +51,7 @@ exportIdentDecl (_, ObjectDef objdef)   = CDeclExt $ exportObject objdef
 exportIdentDecl (_, EnumeratorDef _)    = error "not implemented: enumerator definition"
 
 exportObject :: ObjDef -> CDeclaration NodeInfo
-exportObject d@(ObjDef _ mInit nInf) = CDecl specs' [(Just decl, mInit, Nothing)] nInf
+exportObject d@(ObjDef _ mInit nInf) = CDecl specs' [CDeclarationItem (Just decl) mInit Nothing] nInf
   where
     (DeclAttrs _ _ attrs) = declAttrs d
     specs                 = exportDeclarationSpecifiers (declAttrs d)
@@ -59,7 +59,7 @@ exportObject d@(ObjDef _ mInit nInf) = CDecl specs' [(Just decl, mInit, Nothing)
 
 
 exportDeclaration :: Decl -> CDeclaration NodeInfo
-exportDeclaration d = CDecl specs' [(Just decl, Nothing, Nothing)] undefNode
+exportDeclaration d = CDecl specs' [CDeclI decl] undefNode
   where
     (DeclAttrs _ _ attrs) = declAttrs d
     specs                 = exportDeclarationSpecifiers (declAttrs d)
@@ -95,14 +95,14 @@ exportTypeDecl ty =
   where
   (declspecs,derived) = exportType ty
   declrs | null derived = []
-         | otherwise = [(Just $ CDeclr Nothing derived Nothing [] ni,Nothing,Nothing)]
+         | otherwise = [ CDeclI $ CDeclr Nothing derived Nothing [] ni]
 
 exportTypeDef :: TypeDef -> CDecl
 exportTypeDef (TypeDef ident ty attrs node_info) =
   CDecl (CStorageSpec (CTypedef ni) : declspecs) [declr] node_info
   where
   (declspecs,derived) = exportType ty
-  declr = (Just $ CDeclr (Just ident) derived Nothing (exportAttrs attrs) ni, Nothing, Nothing)
+  declr = CDeclI $ CDeclr (Just ident) derived Nothing (exportAttrs attrs) ni
 
 -- |Export a type to syntax
 exportType :: Type -> ([CDeclSpec],[CDerivedDeclr])
@@ -115,10 +115,10 @@ exportType ty = exportTy [] ty
         let arr_declr = CArrDeclr (exportTypeQualsAttrs tyquals attrs) (exportArraySize array_sz) ni
         in  exportTy (arr_declr : dd) ity
     exportTy dd (FunctionType (FunType ity params variadic) attrs) =
-        let fun_declr = CFunDeclr (Right (map exportParamDecl params,variadic)) (exportAttrs attrs) ni
+        let fun_declr = CFunDeclr (CFunParamsNew (map exportParamDecl params) variadic) (exportAttrs attrs) ni
         in  exportTy (fun_declr : dd) ity
     exportTy dd (FunctionType (FunTypeIncomplete ity) attrs) =
-        let fun_declr = CFunDeclr (Right ([],False)) (exportAttrs attrs) ni
+        let fun_declr = CFunDeclr (CFunParamsNew [] False) (exportAttrs attrs) ni
         in  exportTy (fun_declr : dd) ity
     exportTy dd (TypeDefType (TypeDefRef ty_ident _ node) quals attrs) =
         let declspecs =   CTypeSpec (CTypeDef ty_ident node)
@@ -214,7 +214,7 @@ exportEnumType (EnumType sue_ref enumerators attrs node_info) = [CEnumType enum 
                  (Just (map exportEnumerator enumerators))
                  (exportAttrs attrs)
                  node_info
-    exportEnumerator (Enumerator ident val _ty _) = (ident,Just val)
+    exportEnumerator (Enumerator ident val _ty _) = CEnumVar ident (Just val)
 
 exportEnumTypeRef :: EnumType -> [CTypeSpec]
 exportEnumTypeRef (EnumType sue_ref _ _ node_info) = exportEnumTypeDecl (EnumTypeRef sue_ref node_info)
@@ -226,10 +226,10 @@ exportSUERef (NamedRef ident) = Just ident
 
 exportMemberDecl :: MemberDecl -> CDecl
 exportMemberDecl (AnonBitField ty expr node_info) =
-    CDecl (map CTypeSpec $ exportTypeSpec $ fromDirectType ty) [(Nothing,Nothing,Just expr)] node_info
+    CDecl (map CTypeSpec $ exportTypeSpec $ fromDirectType ty) [CDeclarationItem Nothing Nothing (Just expr)] node_info
 exportMemberDecl (MemberDecl vardecl bitfieldsz node_info) =
     let (specs,declarator) = exportVarDecl vardecl
-    in  CDecl specs [(Just declarator, Nothing, bitfieldsz)] node_info
+    in  CDecl specs [CDeclarationItem (Just declarator) Nothing bitfieldsz] node_info
 exportVarDecl :: VarDecl -> ([CDeclSpec],CDeclr)
 
 -- NOTE: that there is an ambiguity between two possible places for __attributes__ s here
@@ -237,7 +237,7 @@ exportVarDecl (VarDecl name attrs ty) = exportDeclr (exportDeclAttrs attrs) ty [
 exportParamDecl :: ParamDecl -> CDecl
 exportParamDecl paramdecl =
     let (specs,declr) = exportVarDecl (getVarDecl paramdecl)
-    in CDecl specs [(Just declr, Nothing , Nothing) ] (nodeInfo paramdecl)
+    in CDecl specs [CDeclarationItem (Just declr) Nothing Nothing] (nodeInfo paramdecl)
 
 exportDeclAttrs :: DeclAttrs -> [CDeclSpec]
 exportDeclAttrs (DeclAttrs fun_attrs storage attrs) =
