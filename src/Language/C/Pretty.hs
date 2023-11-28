@@ -144,7 +144,7 @@ instance Pretty CStat where
                $$ text "while" <+> text "(" <> pretty expr <> text ");"
     pretty (CFor for_init cond step stat _) =
         ii $ text "for" <+> text "("
-               <> pretty for_init
+               <> pretty for_init <> semi
                <+> maybeP pretty cond <> semi
                <+> maybeP pretty step <> text ")" $+$ prettyPrec (-1) stat
     pretty (CGoto ident _) = ii $ text "goto" <+> identP ident <> semi
