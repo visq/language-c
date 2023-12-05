@@ -709,33 +709,33 @@ default_declaring_list
   	   do{ declr <- withAsmNameAttrs $3 $2
            ; doDeclIdent declspecs declr
            ; withNodeInfo $1 $
-                CDecl declspecs [CDeclarationItem (Just (reverseDeclr declr)) ($4) Nothing] }}
+                CDecl declspecs [CDeclarationItem (reverseDeclr declr) ($4) Nothing] }}
 
   | type_qualifier_list identifier_declarator asm_attrs_opt {-{}-} initializer_opt
   	{% let declspecs = liftTypeQuals $1 in
   	   do{ declr <- withAsmNameAttrs $3 $2
            ; doDeclIdent declspecs declr
-           ; withNodeInfo $1 $ CDecl declspecs [CDeclarationItem (Just (reverseDeclr declr)) ($4) Nothing] }}
+           ; withNodeInfo $1 $ CDecl declspecs [CDeclarationItem (reverseDeclr declr) ($4) Nothing] }}
 
   | type_qualifier_list attrs identifier_declarator asm_attrs_opt {-{}-} initializer_opt -- FIX 1600
   	{% let declspecs = liftTypeQuals $1 in
   	   do{ declr <- withAsmNameAttrs $4 $3
            ; doDeclIdent declspecs declr
-           ; withNodeInfo $1 $ CDecl (declspecs ++ liftCAttrs $2) [CDeclarationItem (Just (reverseDeclr declr)) ($5) Nothing] }}
+           ; withNodeInfo $1 $ CDecl (declspecs ++ liftCAttrs $2) [CDeclarationItem (reverseDeclr declr) ($5) Nothing] }}
 
   -- GNU extension: __attribute__ as the only qualifier
   | attrs identifier_declarator asm_attrs_opt {-{}-} initializer_opt
     {% let declspecs = liftCAttrs $1 in
        do{ declr <- withAsmNameAttrs $3 $2
            ; doDeclIdent declspecs declr
-           ; withNodeInfo $1 $ CDecl declspecs [CDeclarationItem (Just (reverseDeclr declr)) ($4) Nothing] }}
+           ; withNodeInfo $1 $ CDecl declspecs [CDeclarationItem (reverseDeclr declr) ($4) Nothing] }}
 
   | default_declaring_list ',' attrs_opt identifier_declarator asm_attrs_opt {-{}-} initializer_opt
   	{% case $1 of
              CDecl declspecs dies at -> do
                declr <- withAsmNameAttrs (fst $5, snd $5 ++ $3) $4
                doDeclIdent declspecs declr
-               withLength at $ CDecl declspecs (CDeclarationItem (Just (reverseDeclr declr)) ($6) Nothing : dies)  }
+               withLength at $ CDecl declspecs (CDeclarationItem (reverseDeclr declr) ($6) Nothing : dies)  }
 
 -- assembler, followed by attribute annotation
 asm_attrs_opt :: { (Maybe CStrLit, [CAttr]) }
@@ -757,14 +757,14 @@ declaring_list
   	{% do{
   	   declr <- withAsmNameAttrs $3 $2;
   	   doDeclIdent $1 declr;
-       withNodeInfo $1 $ CDecl $1 [CDeclarationItem (Just (reverseDeclr declr)) ($4) Nothing] }
+       withNodeInfo $1 $ CDecl $1 [CDeclarationItem (reverseDeclr declr) ($4) Nothing] }
     }
 
   | type_specifier declarator asm_attrs_opt initializer_opt
   	{% do{
   	   declr <- withAsmNameAttrs $3 $2;
   	   doDeclIdent $1 declr;
-       withNodeInfo $1 $ CDecl $1 [CDeclarationItem (Just (reverseDeclr declr)) ($4) Nothing] }
+       withNodeInfo $1 $ CDecl $1 [CDeclarationItem (reverseDeclr declr) ($4) Nothing] }
     }
 
   | declaring_list ',' attrs_opt declarator asm_attrs_opt initializer_opt
@@ -772,7 +772,7 @@ declaring_list
              CDecl declspecs dies at -> do
                declr <- withAsmNameAttrs (fst $5, snd $5 ++ $3) $4
                doDeclIdent declspecs declr
-               return (CDecl declspecs (CDeclarationItem (Just (reverseDeclr declr)) ($6) Nothing : dies) at) }
+               return (CDecl declspecs (CDeclarationItem (reverseDeclr declr) ($6) Nothing : dies) at) }
 
 
 -- parse C declaration specifiers (C99 6.7)
@@ -1154,18 +1154,29 @@ struct_declaration
 struct_default_declaring_list :: { CDecl }
 struct_default_declaring_list
   : type_qualifier_list attrs_opt struct_identifier_declarator
-  	{% withNodeInfo $1 $ case $3 of (d,s) -> CDecl (liftTypeQuals $1 ++ liftCAttrs $2) [CDeclarationItem d Nothing s] }
+  	{% withNodeInfo $1 $ case $3 of 
+      (Just d,s) -> CDecl (liftTypeQuals $1 ++ liftCAttrs $2) [CDeclarationItem d Nothing s] 
+      (Nothing,Just s) -> CDecl (liftTypeQuals $1 ++ liftCAttrs $2) [CDeclarationExpr s] 
+      _ -> error "should not happen"
+  }
+
 
   -- GNU extension: __attribute__ as only type qualifier
   | attrs struct_identifier_declarator
-    {% withNodeInfo $1 $ case $2 of (d,s) -> CDecl (liftCAttrs $1) [CDeclarationItem d Nothing s] }
+    {% withNodeInfo $1 $ case $2 of 
+      (Just d,s) -> CDecl (liftCAttrs $1) [CDeclarationItem d Nothing s] 
+      (Nothing, Just s) -> CDecl (liftCAttrs $1) [CDeclarationExpr s]
+      _ -> error "should not happen"
+      }
   -- attrs_opt apply to the declared object
   | struct_default_declaring_list ',' attrs_opt struct_identifier_declarator
   	{ case $1 of
             CDecl declspecs dies at ->
               case $4 of
-                (Just d,s) -> CDecl declspecs (CDeclarationItem (Just $ appendObjAttrs $3 d) Nothing s : dies) at
-                (Nothing,s) -> CDecl declspecs (CDeclarationItem Nothing Nothing s : dies) at } -- FIXME
+                (Just d,s) -> CDecl declspecs (CDeclarationItem (appendObjAttrs $3 d) Nothing s : dies) at
+                (Nothing,Just s) -> CDecl declspecs (CDeclarationExpr s : dies) at 
+                _ -> error "should not happen"
+                } -- FIXME
 
 -- * GNU extensions:
 --     allow anonymous nested structures and unions
@@ -1173,14 +1184,18 @@ struct_default_declaring_list
 struct_declaring_list :: { CDecl }
 struct_declaring_list
   : type_specifier struct_declarator attrs_opt
-  	{% withNodeInfo $1 $ case $2 of { (Just d,s)  -> CDecl $1 [CDeclarationItem (Just $! appendObjAttrs $3 d) Nothing s]
-                                    ; (Nothing,s) -> CDecl $1 [CDeclarationItem Nothing Nothing s]  } } {- DO FIXME -}
+  	{% withNodeInfo $1 $ case $2 of { (Just d,s)  -> CDecl $1 [CDeclarationItem (appendObjAttrs $3 d) Nothing s]
+                                    ; (Nothing, Just s) -> CDecl $1 [CDeclarationExpr s]  
+                                    ; _ -> error "should not work" 
+    } }  {- DO FIXME -}
   | struct_declaring_list ',' attrs_opt struct_declarator attrs_opt
   	{ case $1 of
             CDecl declspecs dies attr ->
               case $4 of
-                (Just d,s) -> CDecl declspecs (CDeclarationItem (Just$ appendObjAttrs ($3++$5) d) Nothing s : dies) attr
-                (Nothing,s) -> CDecl declspecs (CDeclarationItem Nothing Nothing s : dies) attr }
+                (Just d,s) -> CDecl declspecs (CDeclarationItem (appendObjAttrs ($3++$5) d) Nothing s : dies) attr
+                (Nothing, Just s) -> CDecl declspecs (CDeclarationExpr s : dies) attr 
+                _ -> error "should not happen"
+                }
 
   -- FIXME: We're being far too liberal in the parsing here, we really want to just
   -- allow unnamed struct and union fields but we're actually allowing any
@@ -1207,11 +1222,13 @@ struct_identifier_declarator :: { (Maybe CDeclr, Maybe CExpr) }
 struct_identifier_declarator
   : identifier_declarator				{ (Just (reverseDeclr $1), Nothing) }
   | ':' constant_expression				{ (Nothing, Just $2) }
-  | identifier_declarator ':' constant_expression	{ (Just (reverseDeclr $1), Just $3) }
+  | identifier_declarator ':' constant_expression	
+    { (Just (reverseDeclr $1), Just $3) }
   | struct_identifier_declarator attr
-    {  case $1 of {   (Nothing,expr) -> (Nothing,expr) {- FIXME -}
-                    ; (Just (CDeclr name derived asmname attrs node), bsz) ->
-                                        (Just (CDeclr name derived asmname (attrs++$2) node),bsz)
+    {  case $1 of {   
+      (Nothing,expr) -> (Nothing,expr) {- FIXME -}; 
+      (Just (CDeclr name derived asmname attrs node), bsz) ->
+        (Just (CDeclr name derived asmname (attrs++$2) node),bsz)
                   }
     }
 
