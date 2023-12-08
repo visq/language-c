@@ -142,8 +142,8 @@ instance Pretty CStat where
       $+$ prettyBody stat
       $$ maybeP prettyElse estat
    where
-    prettyBody c@(CCompound _ _ _) = prettyPrec (-1) c
-    prettyBody nonCompound = prettyPrec (-1) (CCompound [] [CBlockStmt nonCompound] undefined)
+    prettyBody c = prettyPrec (-1) c
+    -- prettyBody nonCompound = prettyPrec (-1) (CCompound [] [CBlockStmt nonCompound] undefined)
     prettyElse (CIf else_if_expr else_if_stat else_stat _) =
       text "else if"
         <+> parens (pretty else_if_expr)
