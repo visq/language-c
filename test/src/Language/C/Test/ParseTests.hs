@@ -22,10 +22,11 @@ equivTestTemplate,runEquivTest,
 compileTestTemplate, runCompileTest,
 ) where
 import Control.Exception
-import Control.Monad.State
+import Control.Monad
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.State (modify)
 import Data.List
 
-import System.Process
 import System.Directory
 import System.Exit
 import System.FilePath (takeBaseName, takeExtension)

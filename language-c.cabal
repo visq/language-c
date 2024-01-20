@@ -1,123 +1,132 @@
-Name:           language-c
-Version:        0.9.2
-Cabal-Version:  >= 1.10
-Build-Type:     Simple
-License:        BSD3
-License-File:   LICENSE
-Copyright:      LICENSE
-Author:         AUTHORS
-Maintainer:     language.c@monoid.al
-Stability:      experimental
-Homepage:       http://visq.github.io/language-c/
-Bug-reports:    https://github.com/visq/language-c/issues/
+cabal-version:   2.2
+name:            language-c
+version:         0.9.3
+license:         BSD-3-Clause
+license-file:    LICENSE
+copyright:       LICENSE
+maintainer:      language.c@monoid.al
+author:          AUTHORS
+tested-with:
+    ghc ==9.8.1 ghc ==9.6.4 ghc ==9.4.8 ghc ==9.2.8 ghc ==9.0.2
+    ghc ==8.10.7 ghc ==8.8.4 ghc ==8.6.5 ghc ==8.4.4 ghc ==8.2.2
+    ghc ==8.0.2 ghc ==7.10.3
 
-Synopsis:       Analysis and generation of C code
-Description:    Language C is a haskell library for the analysis and generation of C code.
-                It features a complete, well tested parser and pretty printer for all of C99 and a large
-                set of C11 and clang/GNU extensions.
-Category:       Language
-Tested-With:    GHC == 8.4.*, GHC == 8.6.*, GHC == 8.8.*, GHC == 8.10.*, GHC == 9.0.*, GHC == 9.2.*
+homepage:        https://visq.github.io/language-c/
+bug-reports:     https://github.com/visq/language-c/issues/
+synopsis:        Analysis and generation of C code
+description:
+    Language C is a haskell library for the analysis and generation of C code.
+    It features a complete, well tested parser and pretty printer for all of C99 and a large
+    set of C11 and clang/GNU extensions.
 
-Extra-Source-Files: AUTHORS AUTHORS.c2hs ChangeLog README
-                    src/Language/C/Parser/Lexer.x
-                    src/Language/C/Parser/Parser.y
+category:        Language
+build-type:      Simple
+extra-doc-files:
+    ChangeLog.md
+    README.md
+    AUTHORS
+    AUTHORS.c2hs
 
-Source-Repository head
-  type:     git
-  location: https://github.com/visq/language-c.git
+source-repository head
+    type:     git
+    location: https://github.com/visq/language-c.git
 
-Flag useByteStrings
-    Description: Use ByteString as InputStream datatype
-    Default: True
-Flag allWarnings
-    Description: Turn on all warnings for building (development)
-    Default: False
-Flag iecFpExtension
-    Description: Support IEC 60559 floating point extension (defines _Float128)
-    Default: True
-Library
-    default-extensions: CPP, DeriveDataTypeable, DeriveGeneric, PatternGuards, BangPatterns, ExistentialQuantification, GeneralizedNewtypeDeriving, ScopedTypeVariables
-    Build-Depends: base >= 4.8 && < 5,
-                   array,
-                   containers >= 0.3,
-                   deepseq >= 1.4.0.0 && < 1.6,
-                   directory,
-                   filepath,
-                   mtl,
-                   pretty < 1.2.0,
-                   process
-    if flag(allWarnings)
-        if impl(ghc >= 8.0)
-          ghc-options:     -Wall -Wno-redundant-constraints
+flag usebytestrings
+    description: Use ByteString as InputStream datatype
+
+flag allwarnings
+    description: Turn on all warnings for building (development)
+    default:     False
+
+flag iecfpextension
+    description:
+        Support IEC 60559 floating point extension (defines _Float128)
+
+library
+    exposed-modules:
+        Language.C
+        Language.C.Data
+        Language.C.Data.Position
+        Language.C.Data.Ident
+        Language.C.Data.Error
+        Language.C.Data.Name
+        Language.C.Data.Node
+        Language.C.Data.InputStream
+        Language.C.Syntax
+        Language.C.Syntax.AST
+        Language.C.Syntax.Constants
+        Language.C.Syntax.Ops
+        Language.C.Syntax.Utils
+        Language.C.Parser
+        Language.C.Pretty
+        Language.C.System.Preprocess
+        Language.C.System.GCC
+        Language.C.Analysis
+        Language.C.Analysis.ConstEval
+        Language.C.Analysis.Builtins
+        Language.C.Analysis.SemError
+        Language.C.Analysis.SemRep
+        Language.C.Analysis.DefTable
+        Language.C.Analysis.TravMonad
+        Language.C.Analysis.AstAnalysis
+        Language.C.Analysis.DeclAnalysis
+        Language.C.Analysis.Debug
+        Language.C.Analysis.TypeCheck
+        Language.C.Analysis.TypeConversions
+        Language.C.Analysis.TypeUtils
+        Language.C.Analysis.NameSpaceMap
+        Language.C.Analysis.MachineDescs
+        Language.C.Analysis.Export
+
+    build-tool-depends: happy:happy, alex:alex
+    hs-source-dirs:     src
+    other-modules:
+        Language.C.Data.RList
+        Language.C.Parser.Builtin
+        Language.C.Parser.Lexer
+        Language.C.Parser.ParserMonad
+        Language.C.Parser.Tokens
+        Language.C.Parser.Parser
+
+    default-language:   Haskell2010
+    default-extensions:
+        CPP DeriveDataTypeable DeriveGeneric PatternGuards BangPatterns
+        ExistentialQuantification GeneralizedNewtypeDeriving
+        ScopedTypeVariables
+
+    build-depends:
+        base >=4.8 && <5,
+        array <0.6,
+        containers >=0.3 && <0.8,
+        deepseq >=1.4.0.0 && <1.6,
+        directory <1.4,
+        filepath <1.6,
+        mtl <2.4,
+        pretty <1.2.0,
+        process <1.7
+
+    if flag(allwarnings)
+        if impl(ghc >=8.0)
+            ghc-options: -Wall -Wno-redundant-constraints
+
         else
-          ghc-options:     -Wall
+            ghc-options: -Wall
 
-    if flag(useByteStrings)
-        Build-Depends: bytestring >= 0.9.0
+    if flag(usebytestrings)
+        build-depends: bytestring >=0.9.0 && <0.13
+
     else
         cpp-options: -DNO_BYTESTRING
 
-    if flag(iecFpExtension)
+    if flag(iecfpextension)
         cpp-options: -DIEC_60559_TYPES_EXT
 
-    Build-Tools:    happy, alex
-
-    Hs-Source-Dirs: src
-    Exposed-Modules:
-                      -- top-level
-                      Language.C
-                      -- data
-                      Language.C.Data
-                      Language.C.Data.Position
-                      Language.C.Data.Ident
-                      Language.C.Data.Error
-                      Language.C.Data.Name
-                      Language.C.Data.Node
-                      Language.C.Data.InputStream
-                      -- syntax
-                      Language.C.Syntax
-                      Language.C.Syntax.AST
-                      Language.C.Syntax.Constants
-                      Language.C.Syntax.Ops
-                      Language.C.Syntax.Utils
-                      -- parser
-                      Language.C.Parser
-                      -- pretty printer
-                      Language.C.Pretty
-                      -- system
-                      Language.C.System.Preprocess
-                      Language.C.System.GCC
-                      -- analysis [experimental]
-                      Language.C.Analysis
-                      Language.C.Analysis.ConstEval
-                      Language.C.Analysis.Builtins
-                      Language.C.Analysis.SemError
-                      Language.C.Analysis.SemRep
-                      Language.C.Analysis.DefTable
-                      Language.C.Analysis.TravMonad
-                      Language.C.Analysis.AstAnalysis
-                      Language.C.Analysis.DeclAnalysis
-                      Language.C.Analysis.Debug
-                      Language.C.Analysis.TypeCheck
-                      Language.C.Analysis.TypeConversions
-                      Language.C.Analysis.TypeUtils
-                      Language.C.Analysis.NameSpaceMap
-                      Language.C.Analysis.MachineDescs
-                      -- semrep -> code [alpha]
-                      Language.C.Analysis.Export
-    Other-Modules:
-                      Language.C.Data.RList
-                      -- parser implementation
-                      Language.C.Parser.Builtin
-                      Language.C.Parser.Lexer
-                      Language.C.Parser.ParserMonad
-                      Language.C.Parser.Tokens
-                      Language.C.Parser.Parser
-  default-language: Haskell2010
-
--- test description
-Test-Suite language-c-harness
-    type:       exitcode-stdio-1.0
-    main-is:    test/harness/run-harness.hs
-    build-depends: base, directory, process, filepath
+test-suite language-c-harness
+    type:             exitcode-stdio-1.0
+    main-is:          test/harness/run-harness.hs
     default-language: Haskell2010
+    build-depends:
+        base <5,
+        directory,
+        process,
+        filepath

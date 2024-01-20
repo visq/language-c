@@ -24,9 +24,11 @@ defaultMain,
 where
 import Control.Applicative (Applicative (..))
 import Control.Exception (catch)
-import Control.Monad.Cont
-import Control.Monad.Reader
-import Control.Monad.State
+import Control.Monad
+import Control.Monad.Cont (MonadCont, ContT, runContT, callCC)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, local, ask)
+import Control.Monad.State (MonadState, StateT, execStateT, put, get, modify, gets)
 import Data.Map (elems)
 import System.CPUTime
 import System.Directory
