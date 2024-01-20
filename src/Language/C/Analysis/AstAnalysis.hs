@@ -766,6 +766,7 @@ builtinType (CBuiltinVaArg _ d _)           = analyseTypeDecl d
 builtinType (CBuiltinOffsetOf _ _ _)        = return size_tType
 builtinType (CBuiltinTypesCompatible _ _ _) = return boolType
 builtinType (CBuiltinConvertVector _expr ty _) = analyseTypeDecl ty
+builtinType (CBuiltinBitCast ty _expr _)    = analyseTypeDecl ty
 
 -- return @Just declspecs@ without @CTypedef@ if the declaration specifier contain @typedef@
 hasTypeDef :: [CDeclSpec] -> Maybe [CDeclSpec]

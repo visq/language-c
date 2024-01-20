@@ -40,7 +40,7 @@ Library
     Build-Depends: base >= 4.8 && < 5,
                    array,
                    containers >= 0.3,
-                   deepseq >= 1.4.0.0 && < 1.5,
+                   deepseq >= 1.4.0.0 && < 1.6,
                    directory,
                    filepath,
                    mtl,

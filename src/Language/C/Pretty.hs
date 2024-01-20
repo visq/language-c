@@ -473,6 +473,9 @@ instance Pretty CBuiltin where
     pretty (CBuiltinConvertVector expr ty _)  =
         text "__builtin_convertvector" <+>
         parens (pretty expr <> comma <+> pretty ty)
+    pretty (CBuiltinBitCast ty expr _)  =
+        text "__builtin_bit_cast" <+>
+        parens (pretty ty <> comma <+> pretty expr)
 
 instance Pretty CAssignOp where
   pretty op = text $ case op of
