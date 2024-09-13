@@ -9,7 +9,7 @@ See http://visq.github.io/language-c/
 Currently unsupported C11 constructs:
  - static assertion 6.7.10 (`_Static_assert`)
  - generic selection 6.5.1.1 (`_Generic`)
- - `_Atomic`, `_Alignas`, `_Thread_local`
+ - `_Atomic`, `_Thread_local`
  - Universal character names
 
 Currently unsupported GNU C extensions:
