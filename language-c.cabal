@@ -35,10 +35,6 @@ source-repository head
 flag usebytestrings
     description: Use ByteString as InputStream datatype
 
-flag allwarnings
-    description: Turn on all warnings for building (development)
-    default:     False
-
 flag iecfpextension
     description:
         Support IEC 60559 floating point extension (defines _Float128)
@@ -106,8 +102,7 @@ library
         pretty <1.2.0,
         process <1.7
 
-    if flag(allwarnings)
-        ghc-options: -Wall -Wno-redundant-constraints
+    ghc-options: -Wall -Wno-redundant-constraints
 
     if flag(usebytestrings)
         build-depends: bytestring >=0.9.0 && <0.13

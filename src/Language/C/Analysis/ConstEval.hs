@@ -1,9 +1,10 @@
 {-# LANGUAGE RelaxedPolyRec #-}
 module Language.C.Analysis.ConstEval where
 
+import Prelude hiding (Foldable(..))
 import Control.Monad
 import Data.Bits
-import Data.List (foldl')
+import Data.Foldable
 import Data.Maybe
 import qualified Data.Map as Map
 import Language.C.Syntax.AST
@@ -97,7 +98,7 @@ compSizeAndAlign md ctr =
                   UnionTag -> roundToAlignment alignment (maximum (0 : sizes))
                   StructTag ->
                     let sizeAndNextAlignment =
-                          zip sizes (tail aligns ++ [alignment])
+                          zip sizes (drop 1 aligns ++ [alignment])
                         offsets = foldl'
                           (\offset (memberSize, nextAlign)
                            -> roundToAlignment nextAlign (offset + memberSize))

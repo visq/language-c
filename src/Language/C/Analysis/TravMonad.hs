@@ -68,9 +68,9 @@ import Data.Maybe
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
 import Control.Monad.Identity
-import Control.Monad.State.Class
+import Control.Monad.State.Class (MonadState, get, put, modify, gets)
 import Control.Monad.Trans
-import Prelude hiding (lookup)
+import Prelude hiding (Applicative(..), lookup)
 
 class (Monad m) => MonadName m where
     -- | unique name generation

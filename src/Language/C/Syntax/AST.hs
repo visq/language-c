@@ -1098,6 +1098,7 @@ instance CNode t1 => CNode (CTypeSpecifier t1) where
         nodeInfo (CBoolType d) = nodeInfo d
         nodeInfo (CComplexType d) = nodeInfo d
         nodeInfo (CInt128Type d) = nodeInfo d
+        nodeInfo (CUInt128Type d) = nodeInfo d
         nodeInfo (CSUType _ n) = nodeInfo n
         nodeInfo (CEnumType _ n) = nodeInfo n
         nodeInfo (CTypeDef _ n) = nodeInfo n
@@ -1121,6 +1122,7 @@ instance Functor CTypeSpecifier where
         fmap _f (CBoolType a1) = CBoolType (_f a1)
         fmap _f (CComplexType a1) = CComplexType (_f a1)
         fmap _f (CInt128Type a1) = CInt128Type (_f a1)
+        fmap _f (CUInt128Type a1) = CUInt128Type (_f a1)
         fmap _f (CSUType a1 a2) = CSUType (fmap _f a1) (_f a2)
         fmap _f (CEnumType a1 a2) = CEnumType (fmap _f a1) (_f a2)
         fmap _f (CTypeDef a1 a2) = CTypeDef a1 (_f a2)
@@ -1142,6 +1144,7 @@ instance Annotated CTypeSpecifier where
         annotation (CBoolType n) = n
         annotation (CComplexType n) = n
         annotation (CInt128Type n) = n
+        annotation (CUInt128Type n) = n
         annotation (CSUType _ n) = n
         annotation (CEnumType _ n) = n
         annotation (CTypeDef _ n) = n
@@ -1161,6 +1164,7 @@ instance Annotated CTypeSpecifier where
         amap f (CBoolType a_1) = CBoolType (f a_1)
         amap f (CComplexType a_1) = CComplexType (f a_1)
         amap f (CInt128Type a_1) = CInt128Type (f a_1)
+        amap f (CUInt128Type a_1) = CUInt128Type (f a_1)
         amap f (CSUType a_1 a_2) = CSUType a_1 (f a_2)
         amap f (CEnumType a_1 a_2) = CEnumType a_1 (f a_2)
         amap f (CTypeDef a_1 a_2) = CTypeDef a_1 (f a_2)

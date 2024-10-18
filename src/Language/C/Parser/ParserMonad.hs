@@ -47,11 +47,10 @@ import Language.C.Data.Name    (Name)
 import Language.C.Data.Ident    (Ident)
 import Language.C.Parser.Tokens (CToken(CTokEof))
 
+import Prelude hiding (Applicative(..), MonadFail(..))
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
-#if MIN_VERSION_base(4,9,0)
 import Control.Monad.Fail (MonadFail (..))
-#endif
 import Data.Set  (Set)
 import qualified Data.Set as Set (fromList, insert, member, delete)
 

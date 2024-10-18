@@ -51,6 +51,7 @@
 module Language.C.Parser.Lexer (lexC, parseError) where
 
 import Data.Char (chr, isDigit)
+import Data.List (uncons)
 import Data.Word (Word8)
 import Control.Monad (liftM, when)
 
@@ -185,10 +186,10 @@ $digitNZ$digit*@intgnusuffix?   { token_plus CTokILit (readCInteger DecRepr) }
 -- character constants (follows K&R A2.5.2, C99 6.4.4.4)
 --
 -- * Universal Character Names are unsupported and cause an error.
-\'($inchar|@charesc)\'  { token CTokCLit (cChar . fst . unescapeChar . tail) }
-L\'($inchar|@charesc)\' { token CTokCLit (cChar_w . fst . unescapeChar . tail . tail) }
-\'($inchar|@charesc){2,}\' { token CTokCLit (flip cChars False . unescapeMultiChars .tail) }
-L\'($inchar|@charesc){2,}\' { token CTokCLit (flip cChars True . unescapeMultiChars . tail . tail) }
+\'($inchar|@charesc)\'  { token CTokCLit (cChar . fst . unescapeChar . drop 1) }
+L\'($inchar|@charesc)\' { token CTokCLit (cChar_w . fst . unescapeChar . drop 2) }
+\'($inchar|@charesc){2,}\' { token CTokCLit (flip cChars False . unescapeMultiChars . drop 1) }
+L\'($inchar|@charesc){2,}\' { token CTokCLit (flip cChars True . unescapeMultiChars . drop 2) }
 
 -- Clang version literals
 @clangversion           { token (\pos -> CTokClangC pos . ClangCVersionTok) readClangCVersion }
@@ -203,8 +204,8 @@ L\'($inchar|@charesc){2,}\' { token CTokCLit (flip cChars True . unescapeMultiCh
 
 -- string literal (follows K&R A2.6)
 -- C99: 6.4.5.
-\"($instr|@charesc)*\"      { token CTokSLit (cString . unescapeString . init . tail) }
-L\"($instr|@charesc)*\"     { token CTokSLit (cString_w . unescapeString . init . tail . tail) }
+\"($instr|@charesc)*\"      { token CTokSLit (cString . unescapeString . init . drop 1) }
+L\"($instr|@charesc)*\"     { token CTokSLit (cString_w . unescapeString . init . drop 2) }
 
 L?\'@ucn\'                        { token_fail "Universal character names are unsupported" }
 L?\'\\[^0-7'\"\?\\abfnrtvuUx]\'     { token_fail "Invalid escape sequence" }
@@ -466,7 +467,7 @@ adjustLineDirective pragmaLen str pos =
     str'''      = dropWhite str''
     (fnameStr,str'''') = span (/= '"') . drop 1 $ str'''
     fname = posFile pos
-    no_fn = null str''' || (head str''' /= '"') || (head str'''' /= '"')
+    no_fn = null str''' || (fmap fst (uncons str''') /= Just '"') || (fmap fst (uncons str'''') /= Just '"')
     -- filename changes to new filename, if specified
     fname' | no_fn = fname
            -- try and get more sharing of file name strings

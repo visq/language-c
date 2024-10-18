@@ -204,7 +204,7 @@ instance Pretty CDecl where
                 attrlistP (getAttrs declr) <+>
                 maybeP ((text "=" <+>) . pretty) initializer
             checked_specs =
-                if any isAttrAfterSUE  (zip specs (tail specs))
+                if any isAttrAfterSUE  (zip specs (drop 1 specs))
                     then trace
                            ("Warning: AST Invariant violated: __attribute__ specifier following struct/union/enum:" ++
                             show (map pretty specs))

@@ -94,7 +94,7 @@ gccParseCPPArgs args =
                            | "-D" `isPrefixOf` cpp_opt = Just (getDefine (drop 2 cpp_opt),rest)
     getArgOpt "-include" (f:rest')                     = Just (IncludeFile f, rest')
     getArgOpt _ _ = Nothing
-    getDefine opt = let (key,val) = break (== '=') opt in Define key (if null val then "" else tail val)
+    getDefine opt = let (key,val) = break (== '=') opt in Define key (drop 1 val)
 
 type ParseArgsState = ((Maybe FilePath, Maybe FilePath, RList CppOption), (RList String, RList String))
 

@@ -20,7 +20,6 @@ exportEnumType, exportEnumTypeDecl, exportEnumTypeRef,
 export,
 )
 where
-import           Data.Functor               ((<$>))
 import           Data.List
 import qualified Data.Map                   as Map
 import           Data.Maybe
@@ -34,7 +33,7 @@ import           Language.C.Syntax.AST
 -- | Export global declarations
 -- TODO: This does not export tags and type defs yet
 export :: GlobalDecls -> CTranslUnit
-export (GlobalDecls objs tags typedefs) = CTranslUnit (declarations ++ []) undefNode
+export (GlobalDecls objs _tags _typedefs) = CTranslUnit (declarations ++ []) undefNode
   where declarations = fmap exportIdentDecl (filterBuiltins $ Map.toList objs)
         filterBuiltins = Prelude.filter noBuiltIns
         noBuiltIns (idn, _) = let n = identToString idn
@@ -74,7 +73,7 @@ exportFunDef d@(FunDef _ stmt _) = CFunDef cDeclSpecs cDecl oldStyleParams stmt 
     specs = exportDeclarationSpecifiers (declAttrs d):: [CDeclarationSpecifier NodeInfo]
 
 exportDeclarationSpecifiers :: DeclAttrs -> [CDeclarationSpecifier NodeInfo]
-exportDeclarationSpecifiers (DeclAttrs funcAttrs storage attrs ) = specifiers
+exportDeclarationSpecifiers (DeclAttrs funcAttrs storage _attrs) = specifiers
   where specifiers = (CFunSpec <$> exportFunAttrs funcAttrs) ++ (CStorageSpec <$> exportStorage storage)
 
 
