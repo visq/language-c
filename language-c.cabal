@@ -7,9 +7,10 @@ copyright:       LICENSE
 maintainer:      language.c@monoid.al
 author:          AUTHORS
 tested-with:
-    ghc ==9.8.1 ghc ==9.6.4 ghc ==9.4.8 ghc ==9.2.8 ghc ==9.0.2
+    ghc ==9.10.1
+    ghc ==9.8.2 ghc ==9.6.6 ghc ==9.4.8 ghc ==9.2.8 ghc ==9.0.2
     ghc ==8.10.7 ghc ==8.8.4 ghc ==8.6.5 ghc ==8.4.4 ghc ==8.2.2
-    ghc ==8.0.2 ghc ==7.10.3
+    ghc ==8.0.2
 
 homepage:        https://visq.github.io/language-c/
 bug-reports:     https://github.com/visq/language-c/issues/
@@ -95,7 +96,7 @@ library
         ScopedTypeVariables
 
     build-depends:
-        base >=4.8 && <5,
+        base >=4.9 && <5,
         array <0.6,
         containers >=0.3 && <0.8,
         deepseq >=1.4.0.0 && <1.6,
@@ -106,11 +107,7 @@ library
         process <1.7
 
     if flag(allwarnings)
-        if impl(ghc >=8.0)
-            ghc-options: -Wall -Wno-redundant-constraints
-
-        else
-            ghc-options: -Wall
+        ghc-options: -Wall -Wno-redundant-constraints
 
     if flag(usebytestrings)
         build-depends: bytestring >=0.9.0 && <0.13
