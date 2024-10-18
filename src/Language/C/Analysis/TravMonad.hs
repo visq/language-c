@@ -419,11 +419,10 @@ instance Monad f => Functor (TravT s f) where
     fmap = liftM
 
 instance Monad f => Applicative (TravT s f) where
-    pure  = return
+    pure x  = TravT (\s -> return (Right (x,s)))
     (<*>) = ap
 
 instance Monad m => Monad (TravT s m) where
-    return x  = TravT (\s -> return (Right (x,s)))
     m >>= k   = TravT (\s -> unTravT m s >>= \y -> case y of
                               Right (x,s1) -> unTravT (k x) s1
                               Left e       -> return (Left e))

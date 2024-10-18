@@ -80,11 +80,10 @@ instance Functor P where
   fmap = liftM
 
 instance Applicative P where
-  pure = return
+  pure = returnP
   (<*>) = ap
 
 instance Monad P where
-  return = returnP
   (>>=) = thenP
 #if !MIN_VERSION_base(4,13,0)
   fail m = getPos >>= \pos -> failP pos [m]

@@ -134,9 +134,6 @@ compositeType t1@(DirectType tn1 q1 a1) t2@(DirectType tn2 q2 a2) =
                   Right $ TyEnum e1
              (TyBuiltin TyVaList, TyBuiltin TyVaList) ->
                Right $ TyBuiltin TyVaList
-             (TyBuiltin _, TyBuiltin _) ->
-               Left $ "incompatible builtin types: "
-                      ++ pType t1 ++ ", " ++ pType t2
              (_, _) -> Left $ "incompatible direct types: "
                        ++ pType t1 ++ ", " ++ pType t2
      Right $ DirectType tn (mergeTypeQuals q1 q2) (mergeAttributes a1 a2)
