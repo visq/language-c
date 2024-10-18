@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.4
+
+- Support `happy-2.1`.
+
 ## 0.9.3
 
 - Add support for `__builtin_bit_cast` to support clang toolchain,
