@@ -103,7 +103,7 @@ module Language.C.Parser.Parser (
 --  !* see `We're being far to liberal here' (... struct definition within structs)
 --  * Documentation isn't complete and consistent yet.
 
-import Prelude    hiding (reverse)
+import Prelude
 import qualified Data.List as List
 import Control.Monad (mplus)
 import Language.C.Parser.Builtin   (builtinTypeNames)
@@ -112,7 +112,8 @@ import Language.C.Parser.Tokens    (CToken(..), GnuCTok(..), ClangCTok (..), pos
 import Language.C.Parser.ParserMonad (P, failP, execParser, getNewName, addTypedef, shadowTypedef, getCurrentPosition,
                                       enterScope, leaveScope, getLastToken, getSavedToken, ParseError(..))
 
-import Language.C.Data.RList
+import Language.C.Data.RList (Reversed(..))
+import qualified Language.C.Data.RList as RList
 import Language.C.Data.InputStream
 import Language.C.Data.Ident
 import Language.C.Data.Name
@@ -271,7 +272,7 @@ clangcversion   { CTokClangC _ (ClangCVersionTok $$) } -- Clang version literal
 -- we have to take special care of empty translation units
 translation_unit :: { CTranslUnit }
 translation_unit
-  : ext_decl_list	{% let decls = reverse $1 in
+  : ext_decl_list	{% let decls = RList.reverse $1 in
                        case decls of
                            []     -> do{ n <- getNewName; p <- getCurrentPosition; return $ CTranslUnit decls (mkNodeInfo' p (p,0) n) }
                            (d:ds) -> withNodeInfo d $ CTranslUnit decls }
@@ -284,9 +285,9 @@ translation_unit
 --     allow redundant ';'
 ext_decl_list :: { Reversed [CExtDecl] }
 ext_decl_list
-  : {- empty -}					        { empty }
+  : {- empty -}					        { RList.empty }
   | ext_decl_list ';'			        { $1 }
-  | ext_decl_list external_declaration	{ $1 `snoc` $2 }
+  | ext_decl_list external_declaration	{ $1 `RList.snoc` $2 }
 
 
 -- parse external C declaration (C99 6.9)
@@ -333,7 +334,7 @@ function_definition
 	  {% leaveScope >> (withNodeInfo $1 $ CFunDef $1 $2 [] $3) }
 
   | declaration_qualifier_list function_declarator compound_statement
-	  {% leaveScope >> (withNodeInfo $1 $ CFunDef (reverse $1) $2 [] $3) }
+	  {% leaveScope >> (withNodeInfo $1 $ CFunDef (RList.reverse $1) $2 [] $3) }
 
   | type_qualifier_list        function_declarator compound_statement
 	  {% leaveScope >> (withNodeInfo $1 $ CFunDef (liftTypeQuals $1) $2 [] $3) }
@@ -344,25 +345,25 @@ function_definition
   -- old function declarators
 
   |                            function_declarator_old declaration_list compound_statement
-  	{% withNodeInfo $1 $ CFunDef [] $1 (reverse $2) $3 }
+  	{% withNodeInfo $1 $ CFunDef [] $1 (RList.reverse $2) $3 }
 
   |                      attrs function_declarator_old declaration_list compound_statement
-  	{% withNodeInfo $2 $ CFunDef (liftCAttrs $1) $2 (reverse $3) $4 }
+  	{% withNodeInfo $2 $ CFunDef (liftCAttrs $1) $2 (RList.reverse $3) $4 }
 
   | declaration_specifier      function_declarator_old declaration_list compound_statement
-  	{% withNodeInfo $1 $ CFunDef $1 $2 (reverse $3) $4 }
+  	{% withNodeInfo $1 $ CFunDef $1 $2 (RList.reverse $3) $4 }
 
   | type_specifier             function_declarator_old declaration_list compound_statement
-  	{% withNodeInfo $1 $ CFunDef $1 $2 (reverse $3) $4 }
+  	{% withNodeInfo $1 $ CFunDef $1 $2 (RList.reverse $3) $4 }
 
   | declaration_qualifier_list function_declarator_old declaration_list compound_statement
-  	{% withNodeInfo $1 $ CFunDef (reverse $1) $2 (reverse $3) $4 }
+  	{% withNodeInfo $1 $ CFunDef (RList.reverse $1) $2 (RList.reverse $3) $4 }
 
   | type_qualifier_list   function_declarator_old declaration_list compound_statement
-  	{% withNodeInfo $1 $ CFunDef (liftTypeQuals $1) $2 (reverse $3) $4 }
+  	{% withNodeInfo $1 $ CFunDef (liftTypeQuals $1) $2 (RList.reverse $3) $4 }
 
   | type_qualifier_list attrs  function_declarator_old declaration_list compound_statement
-  	{% withNodeInfo $1 $ CFunDef (liftTypeQuals $1  ++ liftCAttrs $2) $3 (reverse $4) $5 }
+  	{% withNodeInfo $1 $ CFunDef (liftTypeQuals $1  ++ liftCAttrs $2) $3 (RList.reverse $4) $5 }
 
 -- Read declarator and put function
 function_declarator :: { CDeclr }
@@ -407,10 +408,10 @@ labeled_statement
 compound_statement :: { CStat }
 compound_statement
   : '{' enter_scope block_item_list leave_scope '}'
-  	{% withNodeInfo $1 $ CCompound [] (reverse $3) }
+  	{% withNodeInfo $1 $ CCompound [] (RList.reverse $3) }
 
   | '{' enter_scope label_declarations block_item_list leave_scope '}'
-  	{% withNodeInfo $1 $ CCompound (reverse $3) (reverse $4) }
+  	{% withNodeInfo $1 $ CCompound (RList.reverse $3) (RList.reverse $4) }
 
 
 -- No syntax for these, just side effecting semantic actions.
@@ -423,8 +424,8 @@ leave_scope : {% leaveScope }
 
 block_item_list :: { Reversed [CBlockItem] }
 block_item_list
-  : {- empty -}			{ empty }
-  | block_item_list block_item	{ $1 `snoc` $2 }
+  : {- empty -}			{ RList.empty }
+  | block_item_list block_item	{ $1 `RList.snoc` $2 }
 
 block_item :: { CBlockItem }
 block_item
@@ -446,7 +447,7 @@ nested_function_definition
 	{% leaveScope >> (withNodeInfo $1 $ CFunDef $1 $2 [] $3) }
 
   | declaration_qualifier_list function_declarator compound_statement
-	{% leaveScope >> (withNodeInfo $1 $ CFunDef (reverse $1) $2 [] $3) }
+	{% leaveScope >> (withNodeInfo $1 $ CFunDef (RList.reverse $1) $2 [] $3) }
 
   | type_qualifier_list   function_declarator compound_statement
 	{% leaveScope >> (withNodeInfo $1 $ CFunDef (liftTypeQuals $1) $2 [] $3) }
@@ -458,7 +459,7 @@ nested_function_definition
 label_declarations :: { Reversed [Ident] }
 label_declarations
   : "__label__" identifier_list ';'			{ $2  }
-  | label_declarations "__label__" identifier_list ';'	{ $1 `rappendr` $3 }
+  | label_declarations "__label__" identifier_list ';'	{ $1 `RList.rappendr` $3 }
 
 
 -- parse C expression statement (C99 6.8.3)
@@ -542,12 +543,12 @@ maybe_type_qualifier
 asm_operands :: { [CAsmOperand] }
 asm_operands
   : {- empty -}				{ [] }
-  | nonnull_asm_operands    { reverse $1 }
+  | nonnull_asm_operands    { RList.reverse $1 }
 
 nonnull_asm_operands :: { Reversed [CAsmOperand] }
 nonnull_asm_operands
-  : asm_operand					          { singleton $1 }
-  | nonnull_asm_operands ',' asm_operand  { $1 `snoc` $3 }
+  : asm_operand					          { RList.singleton $1 }
+  | nonnull_asm_operands ',' asm_operand  { $1 `RList.snoc` $3 }
 
 asm_operand :: { CAsmOperand }
 asm_operand
@@ -558,12 +559,12 @@ asm_operand
 asm_clobbers :: { [CStrLit] }
 asm_clobbers
   : {- empty -}             { [] }
-  | nonnull_asm_clobbers    { reverse $1 }
+  | nonnull_asm_clobbers    { RList.reverse $1 }
 
 nonnull_asm_clobbers :: { Reversed [CStrLit] }
 nonnull_asm_clobbers
-  : string_literal                          { singleton $1 }
-  | nonnull_asm_clobbers ',' string_literal { $1 `snoc` $3 }
+  : string_literal                          { RList.singleton $1 }
+  | nonnull_asm_clobbers ',' string_literal { $1 `RList.snoc` $3 }
 
 {-
 ---------------------------------------------------------------------------------------------------------------
@@ -679,10 +680,10 @@ tbc.
 declaration :: { CDecl }
 declaration
   : sue_declaration_specifier ';'
-  	{% withNodeInfo $1 $ CDecl (reverse $1) [] }
+  	{% withNodeInfo $1 $ CDecl (RList.reverse $1) [] }
 
   | sue_type_specifier ';'
-  	{% withNodeInfo $1 $ CDecl (reverse $1) [] }
+  	{% withNodeInfo $1 $ CDecl (RList.reverse $1) [] }
 
   | declaring_list ';'
   	{% case $1 of CDecl declspecs dies at -> withLength at (CDecl declspecs (List.reverse dies)) }
@@ -694,8 +695,8 @@ declaration
 
 declaration_list :: { Reversed [CDecl] }
 declaration_list
-  : {- empty -}					 { empty }
-  | declaration_list declaration { $1 `snoc` $2 }
+  : {- empty -}					 { RList.empty }
+  | declaration_list declaration { $1 `RList.snoc` $2 }
 
 
 -- * SUMMARY: default_declaring_list :- qualifier* identifier_declarator asm_attrs initializer?
@@ -709,7 +710,7 @@ declaration_list
 default_declaring_list :: { CDecl }
 default_declaring_list
   : declaration_qualifier_list identifier_declarator asm_attrs_opt {-{}-} initializer_opt
-  	{% let declspecs = reverse $1 in
+  	{% let declspecs = RList.reverse $1 in
   	   do{ declr <- withAsmNameAttrs $3 $2
            ; doDeclIdent declspecs declr
            ; withNodeInfo $1 $
@@ -785,9 +786,9 @@ declaring_list
 --
 declaration_specifier :: { [CDeclSpec] }
 declaration_specifier
-  : basic_declaration_specifier		{ reverse $1 }	-- Arithmetic or void
-  | sue_declaration_specifier		{ reverse $1 }	-- Struct/Union/Enum
-  | typedef_declaration_specifier	{ reverse $1 }	-- Typedef
+  : basic_declaration_specifier		{ RList.reverse $1 }	-- Arithmetic or void
+  | sue_declaration_specifier		{ RList.reverse $1 }	-- Struct/Union/Enum
+  | typedef_declaration_specifier	{ RList.reverse $1 }	-- Typedef
 
 
 -- A mixture of type qualifiers (const, volatile, restrict, _Atomic, _Nonnull, _Nullable, __read_only, __write_only),
@@ -804,19 +805,19 @@ declaration_specifier
 declaration_qualifier_list :: { Reversed [CDeclSpec] }
 declaration_qualifier_list
   : declaration_qualifier_without_types
-        { singleton $1 }
+        { RList.singleton $1 }
 
   | attrs declaration_qualifier_without_types
-  	{ reverseList (liftCAttrs $1) `snoc` $2 }
+  	{ reverseList (liftCAttrs $1) `RList.snoc` $2 }
 
   | type_qualifier_list declaration_qualifier_without_types
-  	{ rmap CTypeQual $1 `snoc` $2 }
+  	{ RList.rmap CTypeQual $1 `RList.snoc` $2 }
 
   | type_qualifier_list attrs declaration_qualifier_without_types
-  	{ (rmap CTypeQual $1 `rappend` liftCAttrs $2) `snoc` $3 }
+  	{ (RList.rmap CTypeQual $1 `RList.rappend` liftCAttrs $2) `RList.snoc` $3 }
 
   | declaration_qualifier_list declaration_qualifier
-  	{ $1 `snoc` $2 }
+  	{ $1 `RList.snoc` $2 }
 
   | declaration_qualifier_list attr
   	{ addTrailingAttrs $1 $2 }
@@ -876,9 +877,9 @@ alignment_specifier
 -- Type specifier _Atomic(type) is not yet supported because of conflicts with type qualifier _Atomic
 type_specifier :: { [CDeclSpec] }
 type_specifier
-  : basic_type_specifier		{ reverse $1 }	-- Arithmetic or void
-  | sue_type_specifier			{ reverse $1 }	-- Struct/Union/Enum
-  | typedef_type_specifier		{ reverse $1 }	-- Typedef
+  : basic_type_specifier		{ RList.reverse $1 }	-- Arithmetic or void
+  | sue_type_specifier			{ RList.reverse $1 }	-- Struct/Union/Enum
+  | typedef_type_specifier		{ RList.reverse $1 }	-- Typedef
 --  | "_Atomic" '(' type_name ')'                         -- _Atomic(type)
 --        {% withNodeInfo $1 $ \at -> [CTypeSpec (CAtomicType $3 at)] }
 
@@ -919,16 +920,16 @@ basic_type_name
 basic_declaration_specifier :: { Reversed [CDeclSpec] }
 basic_declaration_specifier
   : declaration_qualifier_list basic_type_name
-  	{ $1 `snoc` CTypeSpec $2 }
+  	{ $1 `RList.snoc` CTypeSpec $2 }
 
   | basic_type_specifier storage_class
-  	{ $1 `snoc` CStorageSpec $2 }
+  	{ $1 `RList.snoc` CStorageSpec $2 }
 
   | basic_declaration_specifier declaration_qualifier
-  	{ $1 `snoc` $2 }
+  	{ $1 `RList.snoc` $2 }
 
   | basic_declaration_specifier basic_type_name
-  	{ $1 `snoc` CTypeSpec $2 }
+  	{ $1 `RList.snoc` CTypeSpec $2 }
 
   | basic_declaration_specifier attr
   	{ addTrailingAttrs $1 $2 }
@@ -946,22 +947,22 @@ basic_type_specifier :: { Reversed [CDeclSpec] }
 basic_type_specifier
   -- Arithmetic or void
   : basic_type_name
-  	{ singleton (CTypeSpec $1) }
+  	{ RList.singleton (CTypeSpec $1) }
 
   | attrs basic_type_name
-  	{ (reverseList $ liftCAttrs $1) `snoc` (CTypeSpec $2) }
+  	{ (reverseList $ liftCAttrs $1) `RList.snoc` (CTypeSpec $2) }
 
   | type_qualifier_list basic_type_name
-  	{ rmap CTypeQual $1 `snoc` CTypeSpec $2 }
+  	{ RList.rmap CTypeQual $1 `RList.snoc` CTypeSpec $2 }
 
   | type_qualifier_list attrs basic_type_name
-  	{ rmap CTypeQual $1 `rappend` (liftCAttrs $2) `snoc` CTypeSpec $3 }
+  	{ RList.rmap CTypeQual $1 `RList.rappend` (liftCAttrs $2) `RList.snoc` CTypeSpec $3 }
 
   | basic_type_specifier type_qualifier
-  	{ $1 `snoc` CTypeQual $2 }
+  	{ $1 `RList.snoc` CTypeQual $2 }
 
   | basic_type_specifier basic_type_name
-  	{ $1 `snoc` CTypeSpec $2 }
+  	{ $1 `RList.snoc` CTypeSpec $2 }
 
   | basic_type_specifier attr
      { addTrailingAttrs $1 $2 }
@@ -976,13 +977,13 @@ basic_type_specifier
 sue_declaration_specifier :: { Reversed [CDeclSpec] }
 sue_declaration_specifier
   : declaration_qualifier_list elaborated_type_name
-  	{ $1 `snoc` CTypeSpec $2 }
+  	{ $1 `RList.snoc` CTypeSpec $2 }
 
   | sue_type_specifier storage_class
-  	{ $1 `snoc` CStorageSpec $2 }
+  	{ $1 `RList.snoc` CStorageSpec $2 }
 
   | sue_declaration_specifier declaration_qualifier
-  	{ $1 `snoc` $2 }
+  	{ $1 `RList.snoc` $2 }
 
   | sue_declaration_specifier attr
   	{ addTrailingAttrs $1 $2 }
@@ -1000,19 +1001,19 @@ sue_type_specifier :: { Reversed [CDeclSpec] }
 sue_type_specifier
   -- struct/union/enum
   : elaborated_type_name
-  	{ singleton (CTypeSpec $1) }
+  	{ RList.singleton (CTypeSpec $1) }
 
   | attrs elaborated_type_name
-  	{ (reverseList $ liftCAttrs $1) `snoc` (CTypeSpec $2) }
+  	{ (reverseList $ liftCAttrs $1) `RList.snoc` (CTypeSpec $2) }
 
   | type_qualifier_list elaborated_type_name
-  	{ rmap CTypeQual $1 `snoc` CTypeSpec $2 }
+  	{ RList.rmap CTypeQual $1 `RList.snoc` CTypeSpec $2 }
 
   | type_qualifier_list attrs elaborated_type_name
-  	{ rmap CTypeQual  $1 `rappend` (liftCAttrs $2) `snoc` CTypeSpec $3 }
+  	{ RList.rmap CTypeQual  $1 `RList.rappend` (liftCAttrs $2) `RList.snoc` CTypeSpec $3 }
 
   | sue_type_specifier type_qualifier
-  	{ $1 `snoc` CTypeQual $2 }
+  	{ $1 `RList.snoc` CTypeQual $2 }
 
   | sue_type_specifier attr
     { addTrailingAttrs $1 $2 }
@@ -1029,19 +1030,19 @@ sue_type_specifier
 typedef_declaration_specifier :: { Reversed [CDeclSpec] }
 typedef_declaration_specifier
   : typedef_type_specifier storage_class
-  	{ $1 `snoc` CStorageSpec $2 }
+  	{ $1 `RList.snoc` CStorageSpec $2 }
 
   | declaration_qualifier_list tyident
-  	{% withNodeInfo $2 $ \at -> $1 `snoc` CTypeSpec (CTypeDef $2 at) }
+  	{% withNodeInfo $2 $ \at -> $1 `RList.snoc` CTypeSpec (CTypeDef $2 at) }
 
   | declaration_qualifier_list typeof '(' expression ')'
-  	{% withNodeInfo $2 $ \at -> $1 `snoc` CTypeSpec (CTypeOfExpr $4 at) }
+  	{% withNodeInfo $2 $ \at -> $1 `RList.snoc` CTypeSpec (CTypeOfExpr $4 at) }
 
   | declaration_qualifier_list typeof '(' type_name ')'
-  	{% withNodeInfo $2 $ \at -> $1 `snoc` CTypeSpec (CTypeOfType $4 at) }
+  	{% withNodeInfo $2 $ \at -> $1 `RList.snoc` CTypeSpec (CTypeOfType $4 at) }
 
   | typedef_declaration_specifier declaration_qualifier
-  	{ $1 `snoc` $2 }
+  	{ $1 `RList.snoc` $2 }
 
   | typedef_declaration_specifier attr
   	{ addTrailingAttrs $1 $2 }
@@ -1055,44 +1056,44 @@ typedef_declaration_specifier
 typedef_type_specifier :: { Reversed [CDeclSpec] }
 typedef_type_specifier
   : tyident
-  	{% withNodeInfo $1 $ \at -> singleton (CTypeSpec (CTypeDef $1 at)) }
+  	{% withNodeInfo $1 $ \at -> RList.singleton (CTypeSpec (CTypeDef $1 at)) }
 
   | typeof '(' expression ')'
-  	{% withNodeInfo $1 $ \at -> singleton (CTypeSpec (CTypeOfExpr $3 at)) }
+  	{% withNodeInfo $1 $ \at -> RList.singleton (CTypeSpec (CTypeOfExpr $3 at)) }
 
   | typeof '(' type_name ')'
-  	{% withNodeInfo $1 $ \at -> singleton (CTypeSpec (CTypeOfType $3 at)) }
+  	{% withNodeInfo $1 $ \at -> RList.singleton (CTypeSpec (CTypeOfType $3 at)) }
 
   | type_qualifier_list tyident
-  	{% withNodeInfo $2 $ \at -> rmap CTypeQual  $1 `snoc` CTypeSpec (CTypeDef $2 at) }
+  	{% withNodeInfo $2 $ \at -> RList.rmap CTypeQual  $1 `RList.snoc` CTypeSpec (CTypeDef $2 at) }
 
   | type_qualifier_list typeof '(' expression ')'
-  	{% withNodeInfo $2 $ \at -> rmap CTypeQual  $1 `snoc` CTypeSpec (CTypeOfExpr $4 at) }
+  	{% withNodeInfo $2 $ \at -> RList.rmap CTypeQual  $1 `RList.snoc` CTypeSpec (CTypeOfExpr $4 at) }
 
   | type_qualifier_list typeof '(' type_name ')'
-  	{% withNodeInfo $2 $ \at -> rmap CTypeQual  $1 `snoc` CTypeSpec (CTypeOfType $4 at) }
+  	{% withNodeInfo $2 $ \at -> RList.rmap CTypeQual  $1 `RList.snoc` CTypeSpec (CTypeOfType $4 at) }
 
   -- repeat with attrs (this could be easier if type qualifier list wouldn't allow leading attributes)
   | attrs tyident
-  	{% withNodeInfo $2 $ \at -> reverseList (liftCAttrs $1) `snoc` (CTypeSpec (CTypeDef $2 at)) }
+  	{% withNodeInfo $2 $ \at -> reverseList (liftCAttrs $1) `RList.snoc` (CTypeSpec (CTypeDef $2 at)) }
 
   | attrs typeof '(' expression ')'
-  	{% withNodeInfo $1 $ \at -> reverseList (liftCAttrs $1) `snoc`  (CTypeSpec (CTypeOfExpr $4 at)) }
+  	{% withNodeInfo $1 $ \at -> reverseList (liftCAttrs $1) `RList.snoc`  (CTypeSpec (CTypeOfExpr $4 at)) }
 
   | attrs typeof '(' type_name ')'
-  	{% withNodeInfo $2 $ \at -> reverseList (liftCAttrs $1) `snoc`  (CTypeSpec (CTypeOfType $4 at)) }
+  	{% withNodeInfo $2 $ \at -> reverseList (liftCAttrs $1) `RList.snoc`  (CTypeSpec (CTypeOfType $4 at)) }
 
   | type_qualifier_list attrs tyident
-  	{% withNodeInfo $3 $ \at -> rmap CTypeQual  $1 `rappend` (liftCAttrs $2) `snoc` CTypeSpec (CTypeDef $3 at) }
+  	{% withNodeInfo $3 $ \at -> RList.rmap CTypeQual  $1 `RList.rappend` (liftCAttrs $2) `RList.snoc` CTypeSpec (CTypeDef $3 at) }
 
   | type_qualifier_list attrs typeof '(' expression ')'
-  	{% withNodeInfo $3 $ \at -> rmap CTypeQual  $1 `rappend` (liftCAttrs $2) `snoc` CTypeSpec (CTypeOfExpr $5 at) }
+  	{% withNodeInfo $3 $ \at -> RList.rmap CTypeQual  $1 `RList.rappend` (liftCAttrs $2) `RList.snoc` CTypeSpec (CTypeOfExpr $5 at) }
 
   | type_qualifier_list attrs typeof '(' type_name ')'
-  	{% withNodeInfo $3 $ \at -> rmap CTypeQual  $1 `rappend` (liftCAttrs $2) `snoc` CTypeSpec (CTypeOfType $5 at) }
+  	{% withNodeInfo $3 $ \at -> RList.rmap CTypeQual  $1 `RList.rappend` (liftCAttrs $2) `RList.snoc` CTypeSpec (CTypeOfType $5 at) }
 
   | typedef_type_specifier type_qualifier
-  	{ $1 `snoc` CTypeQual $2 }
+  	{ $1 `RList.snoc` CTypeQual $2 }
 
   | typedef_type_specifier attr
   	{ addTrailingAttrs $1 $2 }
@@ -1117,10 +1118,10 @@ elaborated_type_name
 struct_or_union_specifier :: { CStructUnion }
 struct_or_union_specifier
   : struct_or_union attrs_opt identifier '{' struct_declaration_list  '}'
-  	{% withNodeInfo $1 $ CStruct (unL $1) (Just $3) (Just$ reverse $5) $2 }
+  	{% withNodeInfo $1 $ CStruct (unL $1) (Just $3) (Just$ RList.reverse $5) $2 }
 
   | struct_or_union attrs_opt '{' struct_declaration_list  '}'
-  	{% withNodeInfo $1 $ CStruct (unL $1) Nothing   (Just$ reverse $4) $2 }
+  	{% withNodeInfo $1 $ CStruct (unL $1) Nothing   (Just$ RList.reverse $4) $2 }
 
   | struct_or_union attrs_opt identifier
   	{% withNodeInfo $1 $ CStruct (unL $1) (Just $3) Nothing $2 }
@@ -1134,9 +1135,9 @@ struct_or_union
 
 struct_declaration_list :: { Reversed [CDecl] }
 struct_declaration_list
-  : {- empty -}						{ empty }
+  : {- empty -}						{ RList.empty }
   | struct_declaration_list ';'				{ $1 }
-  | struct_declaration_list struct_declaration		{ $1 `snoc` $2 }
+  | struct_declaration_list struct_declaration		{ $1 `RList.snoc` $2 }
 
 
 -- parse C structure declaration (C99 6.7.2.1)
@@ -1228,24 +1229,24 @@ struct_identifier_declarator
 enum_specifier :: { CEnum }
 enum_specifier
   : enum attrs_opt '{' enumerator_list '}'
-  	{% withNodeInfo $1 $ CEnum Nothing   (Just$ reverse $4) $2 }
+  	{% withNodeInfo $1 $ CEnum Nothing   (Just$ RList.reverse $4) $2 }
 
   | enum attrs_opt '{' enumerator_list ',' '}'
-  	{% withNodeInfo $1 $ CEnum Nothing   (Just$ reverse $4) $2 }
+  	{% withNodeInfo $1 $ CEnum Nothing   (Just$ RList.reverse $4) $2 }
 
   | enum attrs_opt identifier '{' enumerator_list '}'
-  	{% withNodeInfo $1 $ CEnum (Just $3) (Just$ reverse $5) $2 }
+  	{% withNodeInfo $1 $ CEnum (Just $3) (Just$ RList.reverse $5) $2 }
 
   | enum attrs_opt identifier '{' enumerator_list ',' '}'
-  	{% withNodeInfo $1 $ CEnum (Just $3) (Just$ reverse $5) $2 }
+  	{% withNodeInfo $1 $ CEnum (Just $3) (Just$ RList.reverse $5) $2 }
 
   | enum attrs_opt identifier
   	{% withNodeInfo $1 $ CEnum (Just $3) Nothing $2           }
 
 enumerator_list :: { Reversed [(Ident, Maybe CExpr)] }
 enumerator_list
-  : enumerator					{ singleton $1 }
-  | enumerator_list ',' enumerator		{ $1 `snoc` $3 }
+  : enumerator					{ RList.singleton $1 }
+  | enumerator_list ',' enumerator		{ $1 `RList.snoc` $3 }
 
 
 enumerator :: { (Ident, Maybe CExpr) }
@@ -1275,9 +1276,9 @@ type_qualifier
 --    and additionally CAttrs
 type_qualifier_list :: { Reversed [CTypeQual] }
 type_qualifier_list
-  : attrs_opt type_qualifier	             { reverseList (map CAttrQual $1) `snoc` $2 }
-  | type_qualifier_list type_qualifier	     { $1 `snoc` $2 }
-  | type_qualifier_list attrs type_qualifier { ($1 `rappend` map CAttrQual $2) `snoc` $3}
+  : attrs_opt type_qualifier	             { reverseList (map CAttrQual $1) `RList.snoc` $2 }
+  | type_qualifier_list type_qualifier	     { $1 `RList.snoc` $2 }
+  | type_qualifier_list attrs type_qualifier { ($1 `RList.rappend` map CAttrQual $2) `RList.snoc` $3}
 
 -- parse C declarator (C99 6.7.5)
 --
@@ -1341,10 +1342,10 @@ clean_typedef_declarator
   	{% withAttribute $1 $2 $ ptrDeclr $3 [] }
 
   | '*' type_qualifier_list  parameter_typedef_declarator
-  	{% withNodeInfo $1 $ ptrDeclr $3 (reverse $2) }
+  	{% withNodeInfo $1 $ ptrDeclr $3 (RList.reverse $2) }
 
   | '*' type_qualifier_list attrs parameter_typedef_declarator
-  	{% withAttribute $1 $3 $ ptrDeclr $4 (reverse $2)  }
+  	{% withAttribute $1 $3 $ ptrDeclr $4 (RList.reverse $2)  }
 
 -- clean_postfix_typedef_declarator :- ( attrs? clean_typedef_declarator ) declarator_postfix?
 --
@@ -1369,17 +1370,17 @@ paren_typedef_declarator
   	{% withNodeInfo $1 $ ptrDeclr $3 [] }
 
   | '*' type_qualifier_list '(' simple_paren_typedef_declarator ')'
-  	{% withNodeInfo $1 $ ptrDeclr $4 (reverse $2) }
+  	{% withNodeInfo $1 $ ptrDeclr $4 (RList.reverse $2) }
   | '*' type_qualifier_list attrs '(' simple_paren_typedef_declarator ')'
-  	{% withAttribute $1 $3 $ ptrDeclr $5 (reverse $2)  }
+  	{% withAttribute $1 $3 $ ptrDeclr $5 (RList.reverse $2)  }
 
   | '*' paren_typedef_declarator
   	{% withNodeInfo $1 $ ptrDeclr $2 [] }
 
   | '*' type_qualifier_list paren_typedef_declarator
-  	{% withNodeInfo $1 $ ptrDeclr $3 (reverse $2) }
+  	{% withNodeInfo $1 $ ptrDeclr $3 (RList.reverse $2) }
   | '*' type_qualifier_list attrs paren_typedef_declarator
-  	{% withAttribute $1 $3 $ ptrDeclr $4 (reverse $2) }
+  	{% withAttribute $1 $3 $ ptrDeclr $4 (RList.reverse $2) }
 
 -- redundant paren to left of tname
 paren_postfix_typedef_declarator :: { CDeclrR }
@@ -1429,10 +1430,10 @@ unary_identifier_declarator
   	{% withAttribute $1 $2 $ ptrDeclr $3 [] }
 
   | '*' type_qualifier_list identifier_declarator
-  	{% withNodeInfo $1 $ ptrDeclr $3 (reverse $2) }
+  	{% withNodeInfo $1 $ ptrDeclr $3 (RList.reverse $2) }
 
   | '*' type_qualifier_list attrs identifier_declarator
-  	{% withAttribute $1 $3 $ ptrDeclr $4 (reverse $2) }
+  	{% withAttribute $1 $3 $ ptrDeclr $4 (RList.reverse $2) }
 
 postfix_identifier_declarator :: { CDeclrR }
 postfix_identifier_declarator
@@ -1478,12 +1479,12 @@ old_function_declarator
   	{% withNodeInfo $1 $ ptrDeclr $2 [] } -- FIXME: no attr possible here ???
 
   | '*' type_qualifier_list old_function_declarator
-  	{% withNodeInfo $1 $ ptrDeclr $3 (reverse $2) }
+  	{% withNodeInfo $1 $ ptrDeclr $3 (RList.reverse $2) }
 
 postfix_old_function_declarator :: { CDeclrR }
 postfix_old_function_declarator
   : paren_identifier_declarator '(' identifier_list ')'
-  	{% withNodeInfo $1 $ funDeclr $1 (Left $ reverse $3) [] }
+  	{% withNodeInfo $1 $ funDeclr $1 (Left $ RList.reverse $3) [] }
 
   | '(' old_function_declarator ')'
   	{ $2 }
@@ -1497,13 +1498,13 @@ postfix_old_function_declarator
 parameter_type_list :: { ([CDecl], Bool) }
 parameter_type_list
   : {- empty -}				{ ([], False)}
-  | parameter_list			{ (reverse $1, False) }
-  | parameter_list ',' "..."		{ (reverse $1, True) }
+  | parameter_list			{ (RList.reverse $1, False) }
+  | parameter_list ',' "..."		{ (RList.reverse $1, True) }
 
 parameter_list :: { Reversed [CDecl] }
 parameter_list
-  : parameter_declaration				{ singleton $1 }
-  | parameter_list ',' parameter_declaration	{ $1 `snoc` $3 }
+  : parameter_declaration				{ RList.singleton $1 }
+  | parameter_list ',' parameter_declaration	{ $1 `RList.snoc` $3 }
 
 parameter_declaration :: { CDecl }
 parameter_declaration
@@ -1520,13 +1521,13 @@ parameter_declaration
   	{% withNodeInfo $1 $ CDecl $1 [(Just (reverseDeclr $! appendDeclrAttrs $3 $2), Nothing, Nothing)] }
 
   | declaration_qualifier_list
-  	{% withNodeInfo $1 $ CDecl (reverse $1) [] }
+  	{% withNodeInfo $1 $ CDecl (RList.reverse $1) [] }
 
   | declaration_qualifier_list abstract_declarator
-  	{% withNodeInfo $1 $ CDecl (reverse $1) [(Just (reverseDeclr $2), Nothing, Nothing)] }
+  	{% withNodeInfo $1 $ CDecl (RList.reverse $1) [(Just (reverseDeclr $2), Nothing, Nothing)] }
 
   | declaration_qualifier_list identifier_declarator attrs_opt
-  	{% withNodeInfo $1 $ CDecl (reverse $1) [(Just (reverseDeclr $! appendDeclrAttrs $3 $2), Nothing, Nothing)] }
+  	{% withNodeInfo $1 $ CDecl (RList.reverse $1) [(Just (reverseDeclr $! appendDeclrAttrs $3 $2), Nothing, Nothing)] }
 
   | type_specifier
   	{% withNodeInfo $1 $ CDecl $1 [] }
@@ -1554,8 +1555,8 @@ parameter_declaration
 
 identifier_list :: { Reversed [Ident] }
 identifier_list
-  : ident				{ singleton $1 }
-  | identifier_list ',' ident		{ $1 `snoc` $3 }
+  : ident				{ RList.singleton $1 }
+  | identifier_list ',' ident		{ $1 `RList.snoc` $3 }
 
 
 -- parse C type name (C99 6.7.6)
@@ -1624,19 +1625,19 @@ postfix_array_abstract_declarator
   	{% withAttributePF $1 $2 $ \at declr -> arrDeclr declr [] False False $3 at }
 
   | '[' type_qualifier_list assignment_expression_opt ']'
-  	{% withNodeInfo $1 $ \at declr -> arrDeclr declr (reverse $2) False False $3 at }
+  	{% withNodeInfo $1 $ \at declr -> arrDeclr declr (RList.reverse $2) False False $3 at }
 
   | '[' type_qualifier_list attrs assignment_expression_opt ']'
-  	{% withAttributePF $1 $3 $ \at declr -> arrDeclr declr (reverse $2) False False $4 at }
+  	{% withAttributePF $1 $3 $ \at declr -> arrDeclr declr (RList.reverse $2) False False $4 at }
 
   | '[' static attrs_opt assignment_expression ']'
   	{% withAttributePF $1 $3 $ \at declr -> arrDeclr declr [] False True (Just $4) at }
 
   | '[' static type_qualifier_list attrs_opt assignment_expression ']'
-  	{% withAttributePF $1 $4 $ \at declr -> arrDeclr declr (reverse $3) False True (Just $5) at }
+  	{% withAttributePF $1 $4 $ \at declr -> arrDeclr declr (RList.reverse $3) False True (Just $5) at }
 
   | '[' type_qualifier_list attrs_opt static attrs_opt assignment_expression ']'
-  	{% withAttributePF $1 ($3 ++ $5) $ \at declr -> arrDeclr declr (reverse $2) False True  (Just $6) at }
+  	{% withAttributePF $1 ($3 ++ $5) $ \at declr -> arrDeclr declr (RList.reverse $2) False True  (Just $6) at }
 
   | '[' '*' attrs_opt ']'
   	{% withAttributePF $1 $3 $ \at declr -> arrDeclr declr [] True False Nothing at }
@@ -1644,9 +1645,9 @@ postfix_array_abstract_declarator
   	{% withAttributePF $1 ($2 ++ $4) $ \at declr -> arrDeclr declr [] True False Nothing at }
 
   | '[' type_qualifier_list '*' attrs_opt ']'
-  	{% withAttributePF $1 $4 $ \at declr -> arrDeclr declr (reverse $2) True False Nothing at }
+  	{% withAttributePF $1 $4 $ \at declr -> arrDeclr declr (RList.reverse $2) True False Nothing at }
   | '[' type_qualifier_list attrs '*' attrs_opt ']'
-  	{% withAttributePF $1 ($3 ++ $5) $ \at declr -> arrDeclr declr (reverse $2) True False Nothing at }
+  	{% withAttributePF $1 ($3 ++ $5) $ \at declr -> arrDeclr declr (RList.reverse $2) True False Nothing at }
 
 unary_abstract_declarator :: { CDeclrR }
 unary_abstract_declarator
@@ -1654,13 +1655,13 @@ unary_abstract_declarator
   	{% withNodeInfo $1 $ ptrDeclr emptyDeclr [] }
 
   | '*' type_qualifier_list attrs_opt
-  	{% withAttribute $1 $3 $ ptrDeclr emptyDeclr (reverse $2)  }
+  	{% withAttribute $1 $3 $ ptrDeclr emptyDeclr (RList.reverse $2)  }
 
   | '*' abstract_declarator
   	{% withNodeInfo $1 $ ptrDeclr $2 [] }
 
   | '*' type_qualifier_list abstract_declarator
-  	{% withNodeInfo $1 $ ptrDeclr $3 (reverse $2) }
+  	{% withNodeInfo $1 $ ptrDeclr $3 (RList.reverse $2) }
 
   | '*' attrs
   	{% withAttribute $1 $2 $ ptrDeclr emptyDeclr [] }
@@ -1688,8 +1689,8 @@ postfix_abstract_declarator
 initializer :: { CInit }
 initializer
   : assignment_expression		{% withNodeInfo $1 $ CInitExpr $1 }
-  | '{' initializer_list '}'		{% withNodeInfo $1 $ CInitList (reverse $2) }
-  | '{' initializer_list ',' '}'	{% withNodeInfo $1 $ CInitList (reverse $2) }
+  | '{' initializer_list '}'		{% withNodeInfo $1 $ CInitList (RList.reverse $2) }
+  | '{' initializer_list ',' '}'	{% withNodeInfo $1 $ CInitList (RList.reverse $2) }
 
 
 initializer_opt :: { Maybe CInit }
@@ -1700,11 +1701,11 @@ initializer_opt
 
 initializer_list :: { Reversed CInitList }
 initializer_list
-  : {- empty -}						{ empty }
-  | initializer						{ singleton ([],$1) }
-  | designation initializer				{ singleton ($1,$2) }
-  | initializer_list ',' initializer			{ $1 `snoc` ([],$3) }
-  | initializer_list ',' designation initializer	{ $1 `snoc` ($3,$4) }
+  : {- empty -}						{ RList.empty }
+  | initializer						{ RList.singleton ([],$1) }
+  | designation initializer				{ RList.singleton ($1,$2) }
+  | initializer_list ',' initializer			{ $1 `RList.snoc` ([],$3) }
+  | initializer_list ',' designation initializer	{ $1 `RList.snoc` ($3,$4) }
 
 
 -- designation
@@ -1715,15 +1716,15 @@ initializer_list
 --
 designation :: { [CDesignator] }
 designation
-  : designator_list '='		{ reverse $1 }
+  : designator_list '='		{ RList.reverse $1 }
   | identifier ':'		{% withNodeInfo $1 $ \at -> [CMemberDesig $1 at] }
   | array_designator		{ [$1] }
 
 
 designator_list :: { Reversed [CDesignator] }
 designator_list
- : designator				{ singleton $1 }
- | designator_list designator		{ $1 `snoc` $2 }
+ : designator				{ RList.singleton $1 }
+ | designator_list designator		{ $1 `RList.snoc` $2 }
 
 
 designator :: { CDesignator }
@@ -1756,7 +1757,7 @@ primary_expression
   | string_literal       { CConst (liftStrLit $1) }
   | '(' expression ')'	 { $2 }
   | "_Generic" '(' assignment_expression ',' generic_assoc_list ')'
-        {% withNodeInfo $1 $ CGenericSelection $3 (reverse $5) }
+        {% withNodeInfo $1 $ CGenericSelection $3 (RList.reverse $5) }
   -- GNU extensions
   | '(' compound_statement ')'
   	{% withNodeInfo $1 $ CStatExpr $2 }
@@ -1765,7 +1766,7 @@ primary_expression
   	{% withNodeInfo $1 $ CBuiltinExpr . CBuiltinVaArg $3 $5 }
 
   | "__builtin_offsetof" '(' type_name ',' offsetof_member_designator ')'
-  	{% withNodeInfo $1 $ CBuiltinExpr . CBuiltinOffsetOf $3 (reverse $5) }
+  	{% withNodeInfo $1 $ CBuiltinExpr . CBuiltinOffsetOf $3 (RList.reverse $5) }
 
   | "__builtin_types_compatible_p" '(' type_name ',' type_name ')'
   	{% withNodeInfo $1 $ CBuiltinExpr . CBuiltinTypesCompatible $3 $5 }
@@ -1780,8 +1781,8 @@ primary_expression
 --
 -- TODO: introduce AST type for generic association
 generic_assoc_list :: { Reversed [(Maybe CDecl, CExpr)] }
-  : generic_assoc_list ',' generic_assoc { $1 `snoc` $3 }
-  | generic_assoc                        { singleton $1 }
+  : generic_assoc_list ',' generic_assoc { $1 `RList.snoc` $3 }
+  | generic_assoc                        { RList.singleton $1 }
 generic_assoc :: { (Maybe CDecl, CExpr) }
 generic_assoc
   : type_name ':' assignment_expression { (Just $1, $3) }
@@ -1789,9 +1790,9 @@ generic_assoc
 
 offsetof_member_designator :: { Reversed [CDesignator] }
 offsetof_member_designator
-  : identifier						                        {% withNodeInfo $1 $ singleton . CMemberDesig $1 }
-  | offsetof_member_designator '.' identifier		  {% withNodeInfo $3 $ ($1 `snoc`) . CMemberDesig $3 }
-  | offsetof_member_designator '[' expression ']'	{% withNodeInfo $3 $ ($1 `snoc`) . CArrDesig $3 }
+  : identifier						                        {% withNodeInfo $1 $ RList.singleton . CMemberDesig $1 }
+  | offsetof_member_designator '.' identifier		  {% withNodeInfo $3 $ ($1 `RList.snoc`) . CMemberDesig $3 }
+  | offsetof_member_designator '[' expression ']'	{% withNodeInfo $3 $ ($1 `RList.snoc`) . CArrDesig $3 }
 
 
 -- parse C postfix expression (C99 6.5.2)
@@ -1808,7 +1809,7 @@ postfix_expression
   	{% withNodeInfo $1 $ CCall $1 [] }
 
   | postfix_expression '(' argument_expression_list ')'
-  	{% withNodeInfo $1 $ CCall $1 (reverse $3) }
+  	{% withNodeInfo $1 $ CCall $1 (RList.reverse $3) }
 
   | postfix_expression '.' identifier
   	{% withNodeInfo $1 $ CMember $1 $3 False }
@@ -1823,16 +1824,16 @@ postfix_expression
   	{% withNodeInfo $1 $ CUnary CPostDecOp $1 }
 
   | '(' type_name ')' '{' initializer_list '}'
-  	{% withNodeInfo $1 $ CCompoundLit $2 (reverse $5) }
+  	{% withNodeInfo $1 $ CCompoundLit $2 (RList.reverse $5) }
 
   | '(' type_name ')' '{' initializer_list ',' '}'
-  	{% withNodeInfo $1 $ CCompoundLit $2 (reverse $5) }
+  	{% withNodeInfo $1 $ CCompoundLit $2 (RList.reverse $5) }
 
 
 argument_expression_list :: { Reversed [CExpr] }
 argument_expression_list
-  : assignment_expression				{ singleton $1 }
-  | argument_expression_list ',' assignment_expression	{ $1 `snoc` $3 }
+  : assignment_expression				{ RList.singleton $1 }
+  | argument_expression_list ',' assignment_expression	{ $1 `RList.snoc` $3 }
 
 
 -- parse C unary expression (C99 6.5.3)
@@ -2065,12 +2066,12 @@ expression
   	{ $1 }
 
   | assignment_expression ',' comma_expression
-  	{% let es = reverse $3 in withNodeInfo es $ CComma ($1:es) }
+  	{% let es = RList.reverse $3 in withNodeInfo es $ CComma ($1:es) }
 
 comma_expression :: { Reversed [CExpr] }
 comma_expression
-  : assignment_expression			{ singleton $1 }
-  | comma_expression ',' assignment_expression	{ $1 `snoc` $3 }
+  : assignment_expression			{ RList.singleton $1 }
+  | comma_expression ',' assignment_expression	{ $1 `RList.snoc` $3 }
 
 
 -- The following was used for clarity
@@ -2109,13 +2110,13 @@ string_literal
   	{% withNodeInfo $1 $ case $1 of CTokSLit _ s -> CStrLit s }
 
   | cstr string_literal_list
-  	{% withNodeInfo $1 $ case $1 of CTokSLit _ s -> CStrLit (concatCStrings (s : reverse $2)) }
+  	{% withNodeInfo $1 $ case $1 of CTokSLit _ s -> CStrLit (concatCStrings (s : RList.reverse $2)) }
 
 
 string_literal_list :: { Reversed [CString] }
 string_literal_list
-  : cstr			{ case $1 of CTokSLit _ s -> singleton s }
-  | string_literal_list cstr	{ case $2 of CTokSLit _ s -> $1 `snoc` s }
+  : cstr			{ case $1 of CTokSLit _ s -> RList.singleton s }
+  | string_literal_list cstr	{ case $2 of CTokSLit _ s -> $1 `RList.snoc` s }
 
 clang_version_literal :: { ClangCVersion }
   : clangcversion       { $1 }
@@ -2140,11 +2141,11 @@ attrs
 
 attr :: { [CAttr] }
 attr
-  : "__attribute__" '(' '(' attribute_list ')' ')'	{ reverse $4 }
+  : "__attribute__" '(' '(' attribute_list ')' ')'	{ RList.reverse $4 }
 
 attribute_list :: { Reversed [CAttr] }
-  : attribute						          { case $1 of Nothing -> empty; Just attr -> singleton attr }
-  | attribute_list ',' attribute	{ (maybe id (flip snoc) $3) $1 }
+  : attribute						          { case $1 of Nothing -> RList.empty; Just attr -> RList.singleton attr }
+  | attribute_list ',' attribute	{ (maybe id (flip RList.snoc) $3) $1 }
 
 
 attribute :: { Maybe CAttr }
@@ -2152,7 +2153,7 @@ attribute
   : {- empty -}						         { Nothing }
   | ident						               {% withNodeInfo $1 $ Just . CAttr $1  [] }
   | const						               {% withNodeInfo $1 $ Just . CAttr (internalIdent "const") [] }
-  | ident '(' attribute_params ')' {% withNodeInfo $1 $ Just . CAttr $1 (reverse $3) }
+  | ident '(' attribute_params ')' {% withNodeInfo $1 $ Just . CAttr $1 (RList.reverse $3) }
   | ident '(' ')'					         {% withNodeInfo $1 $ Just . CAttr $1 [] }
 
 -- OS X 10.9 (Mavericks) makes use of more liberal attribute syntax
@@ -2161,10 +2162,10 @@ attribute
 
 attribute_params :: { Reversed [CExpr] }
 attribute_params
-  : constant_expression					              { singleton $1 }
+  : constant_expression					              { RList.singleton $1 }
   | unary_expression assignment_operator clang_version_literal { Reversed [] }
   | unary_expression assignment_operator unary_expression { Reversed [] }
-  | attribute_params ',' constant_expression	{ $1 `snoc` $3 }
+  | attribute_params ',' constant_expression	{ $1 `RList.snoc` $3 }
   | attribute_params ',' unary_expression assignment_operator unary_expression { $1 }
   | attribute_params ',' unary_expression assignment_operator clang_version_literal { $1 }
 
@@ -2208,7 +2209,7 @@ withLength nodeinfo mkAttrNode = do
 data CDeclrR = CDeclrR (Maybe Ident) (Reversed [CDerivedDeclr]) (Maybe CStrLit) [CAttr] NodeInfo
 reverseDeclr :: CDeclrR -> CDeclr
 reverseDeclr (CDeclrR ide reversedDDs asmname cattrs at)
-    = CDeclr ide (reverse reversedDDs) asmname cattrs at
+    = CDeclr ide (RList.reverse reversedDDs) asmname cattrs at
 instance CNode (CDeclrR) where
     nodeInfo (CDeclrR _ _ _ _ n) = n
 instance Pos (CDeclrR) where
@@ -2271,7 +2272,7 @@ withAsmNameAttrs (mAsmName, newAttrs) declr = setAsmName mAsmName (appendObjAttr
 
 appendDeclrAttrs :: [CAttr] -> CDeclrR -> CDeclrR
 appendDeclrAttrs newAttrs (CDeclrR ident (Reversed []) asmname cattrs at)
-    = CDeclrR ident empty asmname (cattrs ++ newAttrs) at
+    = CDeclrR ident RList.empty asmname (cattrs ++ newAttrs) at
 appendDeclrAttrs newAttrs (CDeclrR ident (Reversed (x:xs)) asmname cattrs at)
     = CDeclrR ident (Reversed (appendAttrs x : xs)) asmname cattrs at where
     appendAttrs (CPtrDeclr typeQuals at)           = CPtrDeclr (typeQuals ++ map CAttrQual newAttrs) at
@@ -2280,20 +2281,20 @@ appendDeclrAttrs newAttrs (CDeclrR ident (Reversed (x:xs)) asmname cattrs at)
 
 ptrDeclr :: CDeclrR -> [CTypeQual] -> NodeInfo -> CDeclrR
 ptrDeclr (CDeclrR ident derivedDeclrs asmname cattrs dat) tyquals at
-    = CDeclrR ident (derivedDeclrs `snoc` CPtrDeclr tyquals at) asmname cattrs dat
+    = CDeclrR ident (derivedDeclrs `RList.snoc` CPtrDeclr tyquals at) asmname cattrs dat
 funDeclr :: CDeclrR -> (Either [Ident] ([CDecl],Bool)) -> [CAttr] -> NodeInfo -> CDeclrR
 funDeclr (CDeclrR ident derivedDeclrs asmname dcattrs dat) params cattrs at
-    = CDeclrR ident (derivedDeclrs `snoc` CFunDeclr params cattrs at) asmname dcattrs dat
+    = CDeclrR ident (derivedDeclrs `RList.snoc` CFunDeclr params cattrs at) asmname dcattrs dat
 arrDeclr :: CDeclrR -> [CTypeQual] -> Bool -> Bool -> Maybe CExpr -> NodeInfo -> CDeclrR
 arrDeclr (CDeclrR ident derivedDeclrs asmname cattrs dat) tyquals var_sized static_size size_expr_opt at
-    = arr_sz `seq` ( CDeclrR ident (derivedDeclrs `snoc` CArrDeclr tyquals arr_sz at) asmname cattrs dat )
+    = arr_sz `seq` ( CDeclrR ident (derivedDeclrs `RList.snoc` CArrDeclr tyquals arr_sz at) asmname cattrs dat )
     where
     arr_sz = case size_expr_opt of
                  Just e  -> CArrSize static_size e
                  Nothing -> CNoArrSize var_sized
 
 liftTypeQuals :: Reversed [CTypeQual] -> [CDeclSpec]
-liftTypeQuals = map CTypeQual . reverse
+liftTypeQuals = map CTypeQual . RList.reverse
 
 -- lift CAttrs to DeclSpecs
 --
@@ -2304,12 +2305,12 @@ liftCAttrs = map (CTypeQual . CAttrQual)
 -- needs special care when @decl_spec_n@ is a SUE definition
 addTrailingAttrs :: Reversed [CDeclSpec] -> [CAttr] -> Reversed [CDeclSpec]
 addTrailingAttrs declspecs new_attrs =
-    case viewr declspecs of
+    case RList.viewr declspecs of
         (specs_init, CTypeSpec (CSUType (CStruct tag name (Just def) def_attrs su_node) node))
-            -> (specs_init `snoc` CTypeSpec (CSUType (CStruct tag name (Just def) (def_attrs ++ new_attrs) su_node) node))
+            -> (specs_init `RList.snoc` CTypeSpec (CSUType (CStruct tag name (Just def) (def_attrs ++ new_attrs) su_node) node))
         (specs_init, CTypeSpec (CEnumType (CEnum name (Just def) def_attrs e_node) node))
-            -> (specs_init `snoc` CTypeSpec (CEnumType (CEnum name (Just def) (def_attrs ++ new_attrs) e_node) node))
-        _ -> declspecs `rappend` (liftCAttrs new_attrs)
+            -> (specs_init `RList.snoc` CTypeSpec (CEnumType (CEnum name (Just def) (def_attrs ++ new_attrs) e_node) node))
+        _ -> declspecs `RList.rappend` (liftCAttrs new_attrs)
 
 -- convenient instance, the position of a list of things is the position of
 -- the first thing in the list
@@ -2321,9 +2322,9 @@ instance Pos a => Pos (Reversed a) where
   posOf (Reversed x) = posOf x
 
 emptyDeclr :: CDeclrR
-emptyDeclr       = CDeclrR Nothing empty Nothing [] undefNode
+emptyDeclr       = CDeclrR Nothing RList.empty Nothing [] undefNode
 mkVarDeclr :: Ident -> NodeInfo -> CDeclrR
-mkVarDeclr ident = CDeclrR (Just ident) empty Nothing []
+mkVarDeclr ident = CDeclrR (Just ident) RList.empty Nothing []
 
 -- Take the identifiers and use them to update the typedef'ed identifier set
 -- if the decl is defining a typedef then we add it to the set,
