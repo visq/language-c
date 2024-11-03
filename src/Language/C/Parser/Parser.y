@@ -202,6 +202,10 @@ else		{ CTokElse	_ }
 enum		{ CTokEnum	_ }
 extern		{ CTokExtern	_ }
 float		{ CTokFloat	_ }
+"__bf16"	{ CTokBFloat16	_ }
+"__fp16"	{ CTokFloatN  16 False _ }
+"_Float16"	{ CTokFloatN  16 False _ }
+"_Float16x"	{ CTokFloatN  16 True _ }
 "_Float32"	{ CTokFloatN  32 False _ }
 "_Float32x"	{ CTokFloatN  32 True _ }
 "_Float64"	{ CTokFloatN  64 False _ }
@@ -898,6 +902,10 @@ basic_type_name
   | "_Complex"			{% withNodeInfo $1 $ CComplexType }
   | "__int128"                  {% withNodeInfo $1 $ CInt128Type }
   | "__uint128"                 {% withNodeInfo $1 $ CUInt128Type }
+  | "__bf16"                    {% withNodeInfo $1 $ CBFloat16Type }
+  | "__fp16"                    {% withNodeInfo $1 $ (CFloatNType 16 False) }
+  | "_Float16"                  {% withNodeInfo $1 $ (CFloatNType 16 False) }
+  | "_Float16x"                 {% withNodeInfo $1 $ (CFloatNType 16 True) }
   | "_Float32"                  {% withNodeInfo $1 $ (CFloatNType 32 False) }
   | "_Float32x"                 {% withNodeInfo $1 $ (CFloatNType 32 True) }
   | "_Float64"                  {% withNodeInfo $1 $ (CFloatNType 64 False) }

@@ -431,6 +431,7 @@ data FloatType =
       TyFloat
     | TyDouble
     | TyLDouble
+    | TyBFloat16
     | TyFloatN Int Bool
     deriving (Typeable, Data, Eq, Ord)
 
@@ -438,6 +439,7 @@ instance Show FloatType where
     show TyFloat = "float"
     show TyDouble = "double"
     show TyLDouble = "long double"
+    show TyBFloat16 = "__bf16"
     show (TyFloatN n x) = "_Float" ++ (show n) ++ (if x then "x" else "")
 
 -- | composite type declarations

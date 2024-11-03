@@ -7,6 +7,8 @@ static void f(void)
     _Float64x d1 = 2.0;
     _Float128 e1 = 2.0;
     __float128 g1 = 2.0 + e1;
+    _Float16 h1 = 2.0;
+    _Float16x i1 = 2.0;
  
     _Float32 a = 2.0f32;
     _Float32x b = 2.0if32x;
@@ -18,4 +20,5 @@ static void f(void)
     _Float128x f = 2.0f128x;
     _Float128x f1 = 2.0 + d1 + e1;
 #endif
+
 }

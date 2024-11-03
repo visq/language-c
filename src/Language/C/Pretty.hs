@@ -248,6 +248,7 @@ instance Pretty CTypeSpec where
     pretty (CIntType _)         = text "int"
     pretty (CLongType _)        = text "long"
     pretty (CFloatType _)       = text "float"
+    pretty (CBFloat16Type _)    = text "__bf16"
     pretty (CFloatNType n x _)  = text "_Float" <> text (show n) <>
                                   (if x then text "x" else empty)
     pretty (CDoubleType _)      = text "double"
