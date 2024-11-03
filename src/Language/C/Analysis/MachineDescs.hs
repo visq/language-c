@@ -27,6 +27,7 @@ x86_64 =
         TyFloat    -> 4
         TyDouble   -> 8
         TyLDouble  -> 16
+        TyBFloat16 -> error "TyBFloat16"
         TyFloatN{} -> error "TyFloatN"
       builtinSize = \case
         TyVaList -> 24
@@ -52,6 +53,7 @@ x86_64 =
         TyFloat    -> 4
         TyDouble   -> 8
         TyLDouble  -> 16
+        TyBFloat16{} -> error "TyBFloat16"
         TyFloatN{} -> error "TyFloatN"
       builtinAlign = \case
         TyVaList -> 8
@@ -81,6 +83,7 @@ armv7l =
         TyFloat    -> 4
         TyDouble   -> 8
         TyLDouble  -> 8
+        TyBFloat16 -> 2
         TyFloatN{} -> error "TyFloatN"
       builtinSize = \case
         TyVaList -> 4
@@ -106,6 +109,7 @@ armv7l =
         TyFloat    -> 4
         TyDouble   -> 8
         TyLDouble  -> 8
+        TyBFloat16 -> 2
         TyFloatN{} -> error "TyFloatN"
       builtinAlign = \case
         TyVaList -> 4

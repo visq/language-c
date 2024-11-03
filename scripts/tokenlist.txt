@@ -29,6 +29,10 @@ void,
 volatile @__,
 while,
 label __label__
+BFloat16 __bf16
+(CTokFloatN 16 False) __fp16
+(CTokFloatN 16 False) _Float16
+(CTokFloatN 16 True) _Float16x
 (CTokFloatN 32 False) _Float32
 (CTokFloatN 32 True) _Float32x
 (CTokFloatN 64 False) _Float64

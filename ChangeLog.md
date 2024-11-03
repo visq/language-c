@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.5
+
+- Support for half-precision floating point `__fp16`, `_Float16`, and `_Float16x`.
+- Support for bfloat16 `__bf16`.
+
 ## 0.9.4
 
 - Support `happy-2.1`.

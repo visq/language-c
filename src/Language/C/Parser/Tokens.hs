@@ -92,7 +92,10 @@ data CToken = CTokLParen   !PosLength            -- `('
             | CTokEnum     !PosLength            -- `enum'
             | CTokExtern   !PosLength            -- `extern'
             | CTokFloat    !PosLength            -- `float'
-            | CTokFloatN !Int !Bool !PosLength   -- `__float128' or `_Float{32,64,128}{,x}`
+            | CTokBFloat16 !PosLength            -- `__bf16'
+            | CTokFloatN !Int !Bool !PosLength   -- (or `__float128',
+                                                 -- `__fp16',
+                                                 -- `_Float{16,32,64,128}{,x}`)
             | CTokFor      !PosLength            -- `for'
             | CTokGeneric  !PosLength            -- `_Generic'
             | CTokGoto     !PosLength            -- `goto'
@@ -235,6 +238,7 @@ posLenOfTok (CTokElse     pos  ) = pos
 posLenOfTok (CTokEnum     pos  ) = pos
 posLenOfTok (CTokExtern   pos  ) = pos
 posLenOfTok (CTokFloat    pos  ) = pos
+posLenOfTok (CTokBFloat16 pos  ) = pos
 posLenOfTok (CTokFloatN _ _ pos) = pos
 posLenOfTok (CTokFor      pos  ) = pos
 posLenOfTok (CTokGeneric  pos  ) = pos
@@ -348,6 +352,7 @@ instance Show CToken where
   showsPrec _ (CTokEnum     _  ) = showString "enum"
   showsPrec _ (CTokExtern   _  ) = showString "extern"
   showsPrec _ (CTokFloat    _  ) = showString "float"
+  showsPrec _ (CTokBFloat16 _  ) = showString "__bf16"
   showsPrec _ (CTokFloatN n x _) = showString "_Float" . shows n .
                                    showString (if x then "x" else "")
   showsPrec _ (CTokFor      _  ) = showString "for"

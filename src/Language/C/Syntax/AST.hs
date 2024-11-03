@@ -469,6 +469,7 @@ data CTypeSpecifier a
   | CComplexType a
   | CInt128Type  a
   | CUInt128Type a
+  | CBFloat16Type a
   | CFloatNType Int Bool a           -- ^ IEC 60227: width (32,64,128), extended flag
   | CSUType      (CStructureUnion a) a      -- ^ Struct or Union specifier
   | CEnumType    (CEnumeration a)    a      -- ^ Enumeration specifier
@@ -1090,6 +1091,7 @@ instance CNode t1 => CNode (CTypeSpecifier t1) where
         nodeInfo (CShortType d) = nodeInfo d
         nodeInfo (CIntType d) = nodeInfo d
         nodeInfo (CLongType d) = nodeInfo d
+        nodeInfo (CBFloat16Type d) = nodeInfo d
         nodeInfo (CFloatType d) = nodeInfo d
         nodeInfo (CFloatNType _ _ d) = nodeInfo d
         nodeInfo (CDoubleType d) = nodeInfo d
@@ -1115,6 +1117,7 @@ instance Functor CTypeSpecifier where
         fmap _f (CIntType a1) = CIntType (_f a1)
         fmap _f (CLongType a1) = CLongType (_f a1)
         fmap _f (CFloatType a1) = CFloatType (_f a1)
+        fmap _f (CBFloat16Type a1) = CBFloat16Type (_f a1)
         fmap _f (CFloatNType n x a1) = CFloatNType n x (_f a1)
         fmap _f (CDoubleType a1) = CDoubleType (_f a1)
         fmap _f (CSignedType a1) = CSignedType (_f a1)
@@ -1137,6 +1140,7 @@ instance Annotated CTypeSpecifier where
         annotation (CIntType n) = n
         annotation (CLongType n) = n
         annotation (CFloatType n) = n
+        annotation (CBFloat16Type n) = n
         annotation (CFloatNType _ _ n) = n
         annotation (CDoubleType n) = n
         annotation (CSignedType n) = n
@@ -1157,6 +1161,7 @@ instance Annotated CTypeSpecifier where
         amap f (CIntType a_1) = CIntType (f a_1)
         amap f (CLongType a_1) = CLongType (f a_1)
         amap f (CFloatType a_1) = CFloatType (f a_1)
+        amap f (CBFloat16Type a_1) = CBFloat16Type (f a_1)
         amap f (CFloatNType n x a_1) = CFloatNType n x (f a_1)
         amap f (CDoubleType a_1) = CDoubleType (f a_1)
         amap f (CSignedType a_1) = CSignedType (f a_1)
