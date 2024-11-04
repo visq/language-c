@@ -1,6 +1,6 @@
 cabal-version:   2.2
 name:            language-c
-version:         0.9.5
+version:         0.10.0
 license:         BSD-3-Clause
 license-file:    LICENSE
 copyright:       LICENSE
