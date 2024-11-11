@@ -29,6 +29,8 @@
 --    <http://www.sivity.net/projects/language.c/wiki/Cee>
 ------------------------------------------------------------------
 {
+{-# LANGUAGE LambdaCase #-}
+
 module Language.C.Parser.Parser (
   -- * Parse a C translation unit
   parseC,
@@ -106,6 +108,7 @@ module Language.C.Parser.Parser (
 import Prelude
 import qualified Data.List as List
 import Control.Monad (mplus)
+import Data.Maybe (listToMaybe, mapMaybe)
 import Language.C.Parser.Builtin   (builtinTypeNames)
 import Language.C.Parser.Lexer     (lexC, parseError)
 import Language.C.Parser.Tokens    (CToken(..), GnuCTok(..), ClangCTok (..), posLenOfTok)
@@ -1143,7 +1146,7 @@ struct_declaration_list :: { Reversed [CDecl] }
 struct_declaration_list
   : {- empty -}						{ RList.empty }
   | struct_declaration_list ';'				{ $1 }
-  | struct_declaration_list struct_declaration		{ $1 `RList.snoc` ( if ( containsAlign $1 ) then ( addAlign $2 ( getAlign $1 ) ) else $2 ) }
+  | struct_declaration_list struct_declaration		{ $1 `RList.snoc` maybe $2 (addAlign $2) (containsAlign $1) }
   | struct_declaration_list alignment_specifier struct_declaration		{ $1 `RList.snoc` ( addAlign $3 $2 )}
 
 
@@ -2178,42 +2181,21 @@ attribute_params
 
 {
 
-containsAlign :: Reversed [CDecl] -> Bool
-containsAlign (Reversed input) = checkDecls input where
-	checkDecls :: [CDecl] -> Bool
-	checkDecls list = foldr (\x -> \y -> ( checkDecl x ) || y ) False list
+containsAlign :: Reversed [CDecl] -> Maybe CAlignSpec
+containsAlign (Reversed input) = listToMaybe $ mapMaybe checkDecl input
+  where
+    checkDecl :: CDecl -> Maybe CAlignSpec
+    checkDecl = \case
+      CDecl list _ _ -> listToMaybe $ mapMaybe isAlignSpec list
+      _ -> Nothing
 
-	checkDecl :: CDecl -> Bool
-	checkDecl ( CDecl list _ _ ) = checkList list
-
-	checkList :: [CDeclarationSpecifier NodeInfo] -> Bool
-	checkList [] = False
-	checkList ( ( CAlignSpec _ ) : tail ) = True
-	checkList ( _ : tail ) = checkList tail
-
-
-getAlign :: Reversed [CDecl] -> CAlignmentSpecifier NodeInfo
-getAlign ( Reversed input ) = getDecls input where
-	getDecls :: [CDecl] -> CAlignmentSpecifier NodeInfo
-	getDecls ( ( CDecl list _ _ ) : _ ) | listHasAlign list = getFromList list
-	getDecls ( _ : rest ) = getDecls rest
-
-	listHasAlign :: [CDeclarationSpecifier a] -> Bool
-	listHasAlign list = foldr ( \x -> \y -> ( declSpecHasAlign x ) || y ) False list
-
-	declSpecHasAlign :: CDeclarationSpecifier a -> Bool
-	declSpecHasAlign ( CAlignSpec _ ) = True
-	declSpecHasAlign _ = False
-
-	getFromList :: [CDeclarationSpecifier a ] -> CAlignmentSpecifier a
-	getFromList [] = error "Internal error: getAlign called on c declaration list with no alignment"
-	getFromList ( ( CAlignSpec x ) : _ ) = x
-	getFromList ( _ : rest ) = getFromList rest
-
-
+    isAlignSpec :: CDeclSpec -> Maybe CAlignSpec
+    isAlignSpec = \case
+      CAlignSpec x -> Just x
+      _ -> Nothing
 
 addAlign :: CDecl -> CAlignmentSpecifier NodeInfo -> CDecl
-addAlign ( CDecl list list2 a ) align = CDecl ( (CAlignSpec align) : list ) list2 a
+addAlign (CDecl list list2 a) align = CDecl (CAlignSpec align : list) list2 a
 
 --  sometimes it is neccessary to reverse an unreversed list
 reverseList :: [a] -> Reversed [a]
