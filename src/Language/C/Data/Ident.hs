@@ -29,7 +29,6 @@ import Language.C.Data.Position
 import Language.C.Data.Node
 import Language.C.Data.Name (Name)
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 
@@ -38,7 +37,7 @@ import Control.DeepSeq (NFData)
 -- name (anonymous types).
 data SUERef =  AnonymousRef Name
              | NamedRef Ident
-    deriving (Typeable, Data, Ord, Eq, Show, Generic) --, Read
+    deriving (Data, Ord, Eq, Show, Generic) --, Read
 
 instance NFData SUERef
 
@@ -51,7 +50,7 @@ isAnonymousRef _ = False
 data Ident = Ident String       -- lexeme
                    {-# UNPACK #-}   !Int     -- hash to speed up equality check
                    NodeInfo                   -- attributes of this ident. incl. position
-             deriving (Data,Typeable,Show, Generic) -- Read
+             deriving (Data,Show, Generic) -- Read
 
 instance NFData Ident
 

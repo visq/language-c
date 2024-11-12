@@ -1,4 +1,4 @@
-{-# OPTIONS -XPatternGuards #-}
+{-# LANGUAGE PatternGuards #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  RenderTests.hs (executable)
@@ -19,11 +19,11 @@
 -- TODO: Sort the tests. The tablesorter javascript doesn't play nice with the browser's back-button
 -----------------------------------------------------------------------------
 module Main (main) where
+
 import Control.Monad
 import qualified Data.Set as Set
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.List
 
 import System.IO
 import System.Directory (getCurrentDirectory)
@@ -37,7 +37,7 @@ import Language.C.Test.Framework
 
 -- | read the dat file containing the test-results
 readTestRuns :: FilePath -> IO [TestRun]
-readTestRuns = liftM (map read . lines) . readFile
+readTestRuns = fmap (map read . lines) . readFile
 
 -- Summarize a set of test runs
 data TestSetResult = TestSetResult
@@ -72,10 +72,7 @@ data TestSummary = TestSummary
   deriving (Show,Read)
 
 throughput :: TestSummary -> Double
-throughput ts = (totalEntities ts)  `per` (totalTime ts)
-
-numTests :: TestSummary -> Int
-numTests s = numOk s + numFailed s
+throughput ts = totalEntities ts  `per` totalTime ts
 
 initSummary :: Test -> TestSummary
 initSummary t = TestSummary { sTestInfo = t, numOk = 0, numFailed = 0, totalEntities = 0, totalTime = 0 }
@@ -100,7 +97,7 @@ updateSetSummary (TestResults _obj _files results) s =
 
 addToSummary :: TestResult -> Map String TestSummary -> Map String TestSummary
 addToSummary (TestResult testinfo _ teststatus) sums
-  | (isTestError teststatus) = sums
+  | isTestError teststatus = sums
   | otherwise = Map.alter alterSummary (testName testinfo) sums
   where
     alterSummary Nothing = alterSummary (Just (initSummary testinfo))
@@ -126,7 +123,7 @@ indexFile :: String
 indexFile = "index.html"
 
 testSetFile :: TestSetResult -> String
-testSetFile tss = (testSetName tss) ++ ".html"
+testSetFile tss = testSetName tss ++ ".html"
 -- ====================
 -- = main entry point =
 -- ====================
@@ -139,7 +136,7 @@ main = do
     exitWith (ExitFailure 1)
   (parserVersion : _tests) <- getArgs
   let tests = map takeBaseName _tests
-  testruns <- liftM (zip tests) $ mapM (readTestRuns.datFile) tests
+  testruns <- fmap (zip tests) $ mapM (readTestRuns.datFile) tests
   -- make file references relative to the current directory (for publishing)
   pwd <- getCurrentDirectory
   let normalizeFilePath = makeRelative pwd . normalise'
@@ -148,7 +145,7 @@ main = do
   let testresults = map (uncurry computeSummary) testruns
   -- export index file
   writeFile indexFile $
-    htmlFile ("Test result overviews") $
+    htmlFile "Test result overviews" $
       indexContents parserVersion testresults
   -- export detailed file
   forM_ testresults $ \testResult ->
@@ -171,7 +168,7 @@ indexContents parserVersion tsresults =
         ["test set name","total tests", "init error", "fatal error", "tests run", "all tests ok", "some tests failed" ]
         (map overviewRow results)
         (overviewSummaryRow results)
-    overviewRow tsr = (testSetLink tsr) :
+    overviewRow tsr = testSetLink tsr :
                       map (toHtml.show) [totalTestRuns tsr, initErrors tsr, fatalErrors tsr,
                                          executedTests tsr, allOk tsr, someFailed tsr ]
     overviewSummaryRow rs = stringToHtml "Total" :
@@ -180,7 +177,7 @@ indexContents parserVersion tsresults =
     sumMap f = sum . map f
     testSetLink tsr = (anchor << testSetName tsr) ! [href (testSetFile tsr)]
     testSummary tsr =
-          h3 << (testSetLink tsr)
+          h3 << testSetLink tsr
       +++ summaryView tsr
 
 -- | create testset.html
@@ -200,14 +197,14 @@ detailedContents normRef tsr =
 mkTable :: (HTML hd) => [hd] -> [[Html]] -> Html
 mkTable tableHeader tableRows =
   table $
-        thead << (tr << (map (th <<) tableHeader))
-    +++ tbody << (concatHtml $ map (tr . concatHtml . map td) tableRows)
+        thead << (tr << map (th <<) tableHeader)
+    +++ tbody << concatHtml (map (tr . concatHtml . map td) tableRows)
 
 mkTableWithSummaryRow :: (HTML hd, HTML lst) => [hd] -> [[Html]] -> [lst] -> Html
 mkTableWithSummaryRow tableHeader tableRows tableLast =
   table $
-        thead << (tr << (map (th <<) tableHeader))
-    +++ tbody << (concatHtml $ map (tr . concatHtml . map td) tableRows)
+        thead << (tr << map (th <<) tableHeader)
+    +++ tbody << concatHtml (map (tr . concatHtml . map td) tableRows)
     +++ tr (concatHtml $ map (\c -> (td << c) ! [ theclass "last_row" ]) tableLast)
 
 tablesorterImport :: [String] -> Html
@@ -268,36 +265,36 @@ summaryTable summaries = mkTable tblHeader (map mkRow summaries)
 -- create HTML for detailled view
 detailedView :: (FilePath -> FilePath) -> TestSetResult -> Html
 detailedView normRef tsr =
-       h1 (toHtml$ "Detailed Report")
+       h1 (toHtml "Detailed Report")
   +++  detailedTable (Set.toList allKeys) (testRuns tsr) ! [ identifier "reportTable", theclass "tablesorter" ]
   where
     allKeys = Set.fromList . map (testName . sTestInfo) . Map.elems . testSummaries $ tsr
 
     detailedTable testkeys runs = table $
-            (thead << (detailedHeader ("Test Objective" : "Input Files" : testkeys)))
-        +++ (tbody << (aboves $ map (detailedRow testkeys) runs))
+            (thead << detailedHeader ("Test Objective" : "Input Files" : testkeys))
+        +++ (tbody << aboves (map (detailedRow testkeys) runs))
     detailedHeader testkeys = besides $ map (th <<) testkeys
 
-    detailedRow _testkeys (FatalError msg args) = cell$ (td fatalErr) ! [ theclass "fatal_error" ]
+    detailedRow _testkeys (FatalError msg args) = cell$ td fatalErr ! [ theclass "fatal_error" ]
       where
-      fatalErr =      (toHtml $ "Fatal Error: "++show args )
+      fatalErr =      toHtml ("Fatal Error: "++show args)
                   +++ thediv (linesToHtml $ lines msg)  ! [ theclass "errmsg_box" ]
 
-    detailedRow _testkeys (InitFailure msg args) = cell$ (td initError) ! [ theclass "init_error" ]
+    detailedRow _testkeys (InitFailure msg args) = cell$ td initError ! [ theclass "init_error" ]
       where
-      initError =     (toHtml $ "Fatal Initialization Error on " ++ show args)
+      initError =     toHtml ("Fatal Initialization Error on " ++ show args)
                   +++ thediv (linesToHtml $ lines msg) ! [ theclass "errmsg_box" ]
 
     detailedRow testkeys (TestResults testobject filesUnderTest results) =
-      (cell $ td << testobject)
-      `beside` (filesCell filesUnderTest)
-      `beside` (besides $ map (detailedCell results) testkeys)
+      cell (td << testobject)
+      `beside` filesCell filesUnderTest
+      `beside` besides (map (detailedCell results) testkeys)
 
     filesCell :: [FilePath] -> HtmlTable
     filesCell = cell . td . concatHtml . map fileref where
       fileref fp = (anchor << takeFileName fp) ! [href $ normRef fp] +++ br
 
-    detailedCell :: (Map.Map String TestResult) -> String -> HtmlTable
+    detailedCell :: Map.Map String TestResult -> String -> HtmlTable
     detailedCell results key =
       cell$ case Map.lookup key results of
         Nothing                                        -> td (toHtml "n/a") ! [ theclass "not_avail"]
@@ -313,7 +310,7 @@ detailedView normRef tsr =
     failureCell errMsg Nothing = toHtml $ "Failure: "++errMsg
 
     okCell :: Maybe PerfMeasure -> Maybe FilePath -> Html
-    okCell measure mReport = addRef mReport "Ok " +++ (measureInfo measure) ! [ theclass "time_info" ]
+    okCell measure mReport = addRef mReport "Ok " +++ measureInfo measure ! [ theclass "time_info" ]
       where addRef Nothing info  = toHtml info
             addRef (Just f) info = (anchor << info) ! [href $ normRef f]
             measureInfo Nothing = noHtml
@@ -326,5 +323,5 @@ normalise' :: FilePath -> FilePath
 normalise' = joinPath . reverse . foldl removeDotDot [] . splitPath . normalise
   where
     removeDotDot (dircomp:ds) dotDot | dropTrailingPathSeparator dotDot == "..", not (isAbsolute dircomp) = ds
-    removeDotDot (dircomp:ds) dot    | dropTrailingPathSeparator dot == "." = (dircomp:ds)
+    removeDotDot (dircomp:ds) dot    | dropTrailingPathSeparator dot == "." = dircomp:ds
     removeDotDot ds c = c:ds

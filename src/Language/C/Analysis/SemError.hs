@@ -17,7 +17,6 @@ TypeMismatch(..), typeMismatch,
 RedefError(..), RedefInfo(..), RedefKind(..), redefinition,
 )
 where
-import Data.Typeable
 
 -- this means we cannot use SemError in SemRep, but use rich types here
 import Language.C.Analysis.SemRep
@@ -28,26 +27,26 @@ import Language.C.Data.Node
 -- here are the errors available
 
 -- | InvalidASTError is caused by the violation of an invariant in the AST
-newtype InvalidASTError = InvalidAST ErrorInfo deriving (Typeable)
+newtype InvalidASTError = InvalidAST ErrorInfo
 
 instance Error InvalidASTError where
     errorInfo (InvalidAST ei) = ei
     changeErrorLevel (InvalidAST ei) lvl' = InvalidAST (changeErrorLevel ei lvl')
 
 -- | BadSpecifierError is caused by an invalid combination of specifiers
-newtype BadSpecifierError = BadSpecifierError ErrorInfo deriving (Typeable)
+newtype BadSpecifierError = BadSpecifierError ErrorInfo
 
 instance Error BadSpecifierError where
     errorInfo (BadSpecifierError ei) = ei
     changeErrorLevel (BadSpecifierError ei) lvl' = BadSpecifierError (changeErrorLevel ei lvl')
 
 -- | RedefError is caused by an invalid redefinition of the same identifier or type
-data RedefError = RedefError ErrorLevel RedefInfo deriving Typeable
+data RedefError = RedefError ErrorLevel RedefInfo
 
 data RedefInfo = RedefInfo String RedefKind NodeInfo NodeInfo
 data RedefKind = DuplicateDef | DiffKindRedecl | ShadowedDef | DisagreeLinkage |
                  NoLinkageOld
-data TypeMismatch = TypeMismatch String (NodeInfo,Type) (NodeInfo,Type) deriving Typeable
+data TypeMismatch = TypeMismatch String (NodeInfo,Type) (NodeInfo,Type)
 
 -- Invalid AST
 -- ~~~~~~~~~~~

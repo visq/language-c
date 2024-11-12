@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, DeriveDataTypeable #-}
+{-# LANGUAGE ExistentialQuantification #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Language.C.Data.Error
@@ -28,7 +28,8 @@ module Language.C.Data.Error (
     internalErr,
 )
 where
-import Data.Typeable
+
+import Data.Typeable (Typeable, cast)
 import Language.C.Data.Node
 import Language.C.Data.Position
 
@@ -49,7 +50,7 @@ isHardError :: (Error ex) => ex -> Bool
 isHardError = ( > LevelWarn) . errorLevel
 
 -- | information attached to every error in Language.C
-data ErrorInfo = ErrorInfo ErrorLevel Position [String] deriving Typeable
+data ErrorInfo = ErrorInfo ErrorLevel Position [String]
 
 -- to facilitate newtype deriving
 instance Show ErrorInfo where show = showErrorInfo "error"
@@ -63,7 +64,7 @@ mkErrorInfo lvl msg node = ErrorInfo lvl (posOfNode node) (lines msg)
 -- | `supertype' of all errors
 data CError
     = forall err. (Error err) => CError err
-    deriving Typeable
+
 
 -- | errors in Language.C are instance of 'Error'
 class (Typeable e, Show e) => Error e where
@@ -72,7 +73,7 @@ class (Typeable e, Show e) => Error e where
     -- | wrap error in 'CError'
     toError          :: e -> CError
     -- | try to cast a generic 'CError' to the specific error type
-    fromError     :: CError -> (Maybe e)
+    fromError     :: CError -> Maybe e
     -- | modify the error level
     changeErrorLevel :: e -> ErrorLevel -> e
 
@@ -105,7 +106,7 @@ errorMsgs   :: (Error e) => e -> [String]
 errorMsgs = ( \(ErrorInfo _ _ msgs) -> msgs ) . errorInfo
 
 -- | error raised if a operation requires an unsupported or not yet implemented feature.
-data UnsupportedFeature = UnsupportedFeature String Position deriving Typeable
+data UnsupportedFeature = UnsupportedFeature String Position
 instance Error UnsupportedFeature where
     errorInfo (UnsupportedFeature msg pos) = ErrorInfo LevelError pos (lines msg)
 instance Show UnsupportedFeature where show = showError "Unsupported Feature"
@@ -118,7 +119,7 @@ unsupportedFeature_ msg = UnsupportedFeature msg internalPos
 
 -- | unspecified error raised by the user (in case the user does not want to define
 --   her own error types).
-newtype UserError     = UserError ErrorInfo deriving Typeable
+newtype UserError     = UserError ErrorInfo
 instance Error UserError where
     errorInfo (UserError info) = info
 instance Show UserError where show = showError "User Error"
@@ -147,7 +148,7 @@ showErrorInfo short_msg (ErrorInfo level pos msgs) =
     header ++ showMsgLines (if null short_msg then msgs else short_msg:msgs)
     where
     header = showPos pos ++ "[" ++ show level ++ "]"
-    showPos p | isSourcePos p = (posFile p) ++ ":" ++ show (posRow pos) ++ ": " ++
+    showPos p | isSourcePos p = posFile p ++ ":" ++ show (posRow pos) ++ ": " ++
                                 "(column " ++ show (posColumn pos) ++ ") "
               | otherwise = show p ++ ":: "
     showMsgLines []     = internalErr "No short message or error message provided."

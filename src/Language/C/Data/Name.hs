@@ -14,13 +14,12 @@ Name(..),newNameSupply, namesStartingFrom
 ) where
 import Data.Data (Data)
 import Data.Ix
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 
 -- | Name is a unique identifier
 newtype Name = Name { nameId :: Int }
-  deriving (Show, Read, Eq, Ord, Ix, Data, Typeable, Generic)
+  deriving (Show, Read, Eq, Ord, Ix, Data, Generic)
 
 instance NFData Name
 

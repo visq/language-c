@@ -41,7 +41,6 @@ import qualified Data.Map as Map
 import Data.IntMap (IntMap, union)
 import qualified Data.IntMap as IntMap
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 
 {- Name spaces, scopes and contexts [Scopes]
 
@@ -168,7 +167,7 @@ data DeclarationStatus t =
     | KeepDef t       -- ^ new def was discarded
     | Shadowed t      -- ^ new def shadows one in outer scope
     | KindMismatch t  -- ^ kind mismatch
-    deriving (Data,Typeable)
+    deriving (Data)
 declStatusDescr :: DeclarationStatus t -> String
 declStatusDescr NewDecl = "new"
 declStatusDescr (Redeclared _) = "redeclared"

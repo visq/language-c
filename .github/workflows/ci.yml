@@ -1,4 +1,4 @@
-name: Haskell CI
+name: Nix CI
 
 # Big thanks to https://markkarpov.com/post/github-actions-for-haskell-ci.html
 

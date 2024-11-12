@@ -26,7 +26,6 @@ module Language.C.Test.Measures,
 )
 where
 
-import Control.Monad.Except
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map

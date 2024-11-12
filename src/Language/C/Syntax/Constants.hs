@@ -31,7 +31,6 @@ import Data.Bits
 import Data.Char
 import Numeric (showOct, showHex, readHex, readOct, readDec)
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic, Generic1)
 import Control.DeepSeq (NFData)
 
@@ -42,7 +41,7 @@ data CChar = CChar
            | CChars
               [Char] -- multi-character character constant
               !Bool   -- wide flag
-           deriving (Eq,Ord,Data,Typeable,Generic)
+           deriving (Eq,Ord,Data,Generic)
 
 instance Show CChar where
     showsPrec _ (CChar c wideflag)   = _showWideFlag wideflag . showCharConst c
@@ -89,13 +88,13 @@ cChars = CChars
 
 -- | datatype for memorizing the representation of an integer
 data CIntRepr = DecRepr | HexRepr | OctalRepr
-  deriving (Eq,Ord,Enum,Bounded,Data,Typeable,Generic)
+  deriving (Eq,Ord,Enum,Bounded,Data,Generic)
 
 instance NFData CIntRepr
 
 -- | datatype representing type flags for integers
 data CIntFlag = FlagUnsigned | FlagLong | FlagLongLong | FlagImag
-  deriving (Eq,Ord,Enum,Bounded,Data,Typeable,Generic)
+  deriving (Eq,Ord,Enum,Bounded,Data,Generic)
 instance Show CIntFlag where
     show FlagUnsigned = "u"
     show FlagLong = "L"
@@ -111,7 +110,7 @@ data CInteger = CInteger
                  !Integer
                  !CIntRepr
                  !(Flags CIntFlag)  -- integer flags
-                 deriving (Eq,Ord,Data,Typeable,Generic)
+                 deriving (Eq,Ord,Data,Generic)
 instance Show CInteger where
     showsPrec _ (CInteger ig repr flags) = showInt ig . showString (concatMap showIFlag [FlagUnsigned .. ]) where
         showIFlag f = if testFlag f flags then show f else []
@@ -153,7 +152,7 @@ cInteger i = CInteger i DecRepr noFlags
 -- | Floats (represented as strings)
 data CFloat = CFloat
                !String
-               deriving (Eq,Ord,Data,Typeable,Generic)
+               deriving (Eq,Ord,Data,Generic)
 instance Show CFloat where
   showsPrec _ (CFloat internal) = showString internal
 instance NFData CFloat
@@ -169,7 +168,7 @@ readCFloat = CFloat
 -- <https://clang.llvm.org/docs/AttributeReference.html#availability>
 data ClangCVersion = ClangCVersion
                      !String
-                     deriving (Eq,Ord,Data,Typeable)
+                     deriving (Eq,Ord,Data)
 instance Show ClangCVersion where
   showsPrec _ (ClangCVersion internal) = showString internal
 
@@ -180,7 +179,7 @@ readClangCVersion = ClangCVersion
 data CString = CString
                 String    -- characters
                 Bool      -- wide flag
-                deriving (Eq,Ord,Data,Typeable, Generic)
+                deriving (Eq,Ord,Data, Generic)
 instance Show CString where
     showsPrec _ (CString str wideflag) = _showWideFlag wideflag . showStringLit str
 instance NFData CString
@@ -297,7 +296,7 @@ head' err []  = error err
 head' _ (x:_) = x
 
 -- TODO: Move to separate file ?
-newtype Flags f = Flags Integer deriving (Eq,Ord,Data,Typeable,Generic,Generic1)
+newtype Flags f = Flags Integer deriving (Eq,Ord,Data,Generic,Generic1)
 instance NFData (Flags f)
 noFlags :: Flags f
 noFlags = Flags 0

@@ -7,16 +7,15 @@ copyright:       LICENSE
 maintainer:      language.c@monoid.al
 author:          AUTHORS
 tested-with:
-    ghc ==9.10.1
-    ghc ==9.8.2 ghc ==9.6.6 ghc ==9.4.8 ghc ==9.2.8 ghc ==9.0.2
-    ghc ==8.10.7 ghc ==8.8.4 ghc ==8.6.5 ghc ==8.4.4 ghc ==8.2.2
-    ghc ==8.0.2
+    ghc ==9.12.1 ghc ==9.10.1 ghc ==9.8.2 ghc ==9.6.6 ghc ==9.4.8
+    ghc ==9.2.8 ghc ==9.0.2 ghc ==8.10.7 ghc ==8.8.4 ghc ==8.6.5
+    ghc ==8.4.4 ghc ==8.2.2 ghc ==8.0.2
 
 homepage:        https://visq.github.io/language-c/
 bug-reports:     https://github.com/visq/language-c/issues/
 synopsis:        Analysis and generation of C code
 description:
-    Language C is a haskell library for the analysis and generation of C code.
+    Language C is a Haskell library for the analysis and generation of C code.
     It features a complete, well tested parser and pretty printer for all of C99 and a large
     set of C11 and clang/GNU extensions.
 
@@ -34,10 +33,13 @@ source-repository head
 
 flag usebytestrings
     description: Use ByteString as InputStream datatype
+    manual:      True
 
 flag iecfpextension
     description:
         Support IEC 60559 floating point extension (defines _Float128)
+
+    manual:      True
 
 library
     exposed-modules:
@@ -91,6 +93,7 @@ library
         ExistentialQuantification GeneralizedNewtypeDeriving
         ScopedTypeVariables
 
+    ghc-options:        -Wall -Wno-redundant-constraints
     build-depends:
         base >=4.9 && <5,
         array <0.6,
@@ -101,8 +104,6 @@ library
         mtl <2.4,
         pretty <1.2.0,
         process <1.7
-
-    ghc-options: -Wall -Wno-redundant-constraints
 
     if flag(usebytestrings)
         build-depends: bytestring >=0.9.0 && <0.13

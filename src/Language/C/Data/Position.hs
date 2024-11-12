@@ -28,7 +28,6 @@ module Language.C.Data.Position (
   Pos(..),
 ) where
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 
@@ -36,7 +35,7 @@ import Control.DeepSeq (NFData)
 data FilePosition = FilePosition { posSrcFile    :: String,            -- ^ source file
                                    posParentFile :: (Maybe Position)   -- ^ including file, if any
                                  }
-                    deriving (Eq, Ord, Typeable, Data, Generic)
+                    deriving (Eq, Ord, Data, Generic)
 
 instance NFData FilePosition
 
@@ -50,7 +49,7 @@ data Position = Position { posOffset :: {-# UNPACK #-} !Int  -- ^ absolute offse
               | NoPosition
               | BuiltinPosition
               | InternalPosition
-                deriving (Eq, Ord, Typeable, Data, Generic)
+                deriving (Eq, Ord, Data, Generic)
 
 instance NFData Position
 

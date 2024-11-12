@@ -22,14 +22,13 @@ module Language.C.Data.Node (
 import Language.C.Data.Position
 import Language.C.Data.Name     (Name)
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 
 -- | Parsed entity attribute
 data NodeInfo = OnlyPos  Position {-# UNPACK #-} !PosLength        -- only pos and last token (for internal stuff only)
               | NodeInfo Position {-# UNPACK #-} !PosLength !Name  -- pos, last token and unique name
-           deriving (Data,Typeable,Eq,Ord, Generic)
+           deriving (Data,Eq,Ord, Generic)
 
 instance NFData NodeInfo
 

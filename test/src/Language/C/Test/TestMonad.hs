@@ -30,6 +30,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, local, ask)
 import Control.Monad.State (MonadState, StateT, execStateT, put, get, modify, gets)
 import Data.Map (elems)
+import Prelude hiding (Applicative(..))
 import System.CPUTime
 import System.Directory
 import System.Environment (getArgs)

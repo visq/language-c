@@ -26,7 +26,6 @@ isEffectfulOp
 )
 where
 import Data.Data (Data)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 -- | C assignment operators (K&R A7.17)
@@ -41,7 +40,7 @@ data CAssignOp = CAssignOp
                | CAndAssOp
                | CXorAssOp
                | COrAssOp
-               deriving (Eq,Ord,Show,Data,Typeable,Generic)
+               deriving (Eq,Ord,Show,Data,Generic)
 
 instance NFData CAssignOp
 
@@ -78,7 +77,7 @@ data CBinaryOp = CMulOp
                | COrOp                  -- ^ inclusive bitwise or
                | CLndOp                 -- ^ logical and
                | CLorOp                 -- ^ logical or
-               deriving (Eq,Ord,Show,Data,Typeable,Generic)
+               deriving (Eq,Ord,Show,Data,Generic)
 
 instance NFData CBinaryOp
 
@@ -106,7 +105,7 @@ data CUnaryOp = CPreIncOp               -- ^ prefix increment operator
               | CMinOp                  -- ^ prefix minus
               | CCompOp                 -- ^ one's complement
               | CNegOp                  -- ^ logical negation
-              deriving (Eq,Ord,Show,Data,Typeable,Generic)
+              deriving (Eq,Ord,Show,Data,Generic)
 
 instance NFData CUnaryOp
 
