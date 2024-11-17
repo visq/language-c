@@ -14,17 +14,9 @@ TESTS=analysis_enum \
 
 #bug20140111_utf8
 all: tests
-tests:  $(TESTS:=.runtest)
-prepare: make_examples make_test
-make_examples: build_lib
-	make -C ../../examples
-build_lib:
-	cd ../.. && cabal build
-make_test: build_lib
-	make -C ../
+tests: $(TESTS:=.runtest)
 clean: $(TESTS:=.runclean)
-	make -C ../../examples clean
-%.runtest: | prepare
+%.runtest:
 	make -C $* clean all
 %.runclean:
 	make -C $* clean

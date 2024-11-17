@@ -36,9 +36,10 @@ findM p (x:xs) = do guard <- p x ; if guard then (return $ Just x) else (findM p
 main :: IO ExitCode
 main = do
   actual_test_dir <- getActualTestDirectory testDirs
-  has_makefile <- doesFileExist (actual_test_dir </> "Makefile")
+  let makefileName = actual_test_dir </> "Makefile"
+  has_makefile <- doesFileExist makefileName
   when (not has_makefile) $ do
-    hPutStrLn stderr "No Makefile found (out of source tree)"
+    hPutStrLn stderr $ "No " ++ makefileName ++ " found (out of source tree)"
     hPutStrLn stderr "Skipping harness test"
     exitWith ExitSuccess
   tests <- subdirectoriesOf actual_test_dir
@@ -46,7 +47,7 @@ main = do
   hPutStrLn stderr ("Changing to test directory " ++ actual_test_dir ++ " and compiling")
   -- build test executables
   setCurrentDirectory (cdir</>actual_test_dir)
-  callProcess "make" ["prepare"]
+  callProcess "make" ["tests"]
   -- run harness tests
   hasFailure <- findM (liftM (/= ExitSuccess) . runTest . (cdir</>) . (actual_test_dir</>)) tests
   setCurrentDirectory cdir

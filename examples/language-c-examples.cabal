@@ -15,27 +15,32 @@ Synopsis:       Examples - Analysis and generation of C code
 Description:    Language C is a haskell library for the analysis and generation of C code.
 Category:       Language
 
+tested-with:
+    ghc ==9.12.1 ghc ==9.10.1 ghc ==9.8.2 ghc ==9.6.6 ghc ==9.4.8
+    ghc ==9.2.8 ghc ==9.0.2 ghc ==8.10.7 ghc ==8.8.4 ghc ==8.6.5
+    ghc ==8.4.4 ghc ==8.2.2 ghc ==8.0.2
+
 Executable ParseAndPrint
    main-is: ParseAndPrint.hs
-   build-depends: base, filepath, mtl, pretty, language-c
+   build-depends: base < 5, filepath < 2, mtl < 3, pretty < 2, language-c < 1
 
 Executable ScanFile
    main-is: ScanFile.hs
-   build-depends: base, filepath, mtl, pretty, language-c
+   build-depends: base < 5, filepath < 2, mtl < 3, pretty < 2, language-c < 1
 
 Executable SearchDef
    main-is: SearchDef.hs
-   build-depends: base, filepath, mtl, pretty, containers, language-c
+   build-depends: base < 5, containers < 1, filepath < 2, mtl < 3, pretty < 2, language-c < 1
 
 Executable TypeCheck
    main-is: TypeCheck.hs
-   build-depends: base, filepath, mtl, pretty, containers, syb, language-c
+   build-depends: base < 5, containers < 1, filepath < 2, mtl < 3, pretty < 2, syb < 1, language-c < 1
 
 Executable ComputeSize
    main-is: ComputeSize.hs
-   build-depends: base, filepath, mtl, pretty, containers, syb, language-c
+   build-depends: base < 5, containers < 1, filepath < 2, mtl < 3, pretty < 2, syb < 1, language-c < 1
 
 Executable DumpAst
    main-is: DumpAst.hs
-   build-depends: base, filepath, mtl, pretty, language-c
+   build-depends: base < 5, filepath < 2, mtl < 3, pretty < 2, language-c < 1
 
