@@ -97,7 +97,7 @@ library
     build-depends:
         base >=4.9 && <5,
         array <0.6,
-        containers >=0.3 && <0.8,
+        containers >=0.3 && <0.9,
         deepseq >=1.4.0.0 && <1.6,
         directory <1.4,
         filepath <1.6,
