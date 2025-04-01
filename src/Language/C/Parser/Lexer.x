@@ -121,7 +121,7 @@ $infname  = . # [ \\ \" ]             -- valid character in a filename
 @binexp    = [pP][\+\-]?@digits
 
 -- Suffixes `qQwW` are GNU floating type extensions: <https://gcc.gnu.org/onlinedocs/gcc/Floating-Types.html>
-@iec60559suffix = (32|64|128)[x]?
+@iec60559suffix = (16|32|64|128)[x]?
 @floatsuffix    = [fFlLqQwW]@iec60559suffix?
 @floatgnusuffix = @floatsuffix@gnusuffix?|@gnusuffix@floatsuffix?
 
