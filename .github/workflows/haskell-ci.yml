@@ -8,18 +8,19 @@
 #
 # For more information, see https://github.com/haskell-CI/haskell-ci
 #
-# version: 0.19.20241111
+# version: 0.19.20251118
 #
-# REGENDATA ("0.19.20241111",["github","language-c.cabal"])
+# REGENDATA ("0.19.20251118",["github","language-c.cabal"])
 #
 name: Haskell-CI
 on:
   - push
   - pull_request
+  - merge_group
 jobs:
   linux:
     name: Haskell-CI - Linux - ${{ matrix.compiler }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes:
       60
     container:
@@ -28,24 +29,29 @@ jobs:
     strategy:
       matrix:
         include:
-          - compiler: ghc-9.12.0.20241031
+          - compiler: ghc-9.14.0.20251104
             compilerKind: ghc
-            compilerVersion: 9.12.0.20241031
+            compilerVersion: 9.14.0.20251104
             setup-method: ghcup-prerelease
             allow-failure: false
-          - compiler: ghc-9.10.1
+          - compiler: ghc-9.12.2
             compilerKind: ghc
-            compilerVersion: 9.10.1
+            compilerVersion: 9.12.2
             setup-method: ghcup
             allow-failure: false
-          - compiler: ghc-9.8.2
+          - compiler: ghc-9.10.3
             compilerKind: ghc
-            compilerVersion: 9.8.2
+            compilerVersion: 9.10.3
             setup-method: ghcup
             allow-failure: false
-          - compiler: ghc-9.6.6
+          - compiler: ghc-9.8.4
             compilerKind: ghc
-            compilerVersion: 9.6.6
+            compilerVersion: 9.8.4
+            setup-method: ghcup
+            allow-failure: false
+          - compiler: ghc-9.6.7
+            compilerKind: ghc
+            compilerVersion: 9.6.7
             setup-method: ghcup
             allow-failure: false
           - compiler: ghc-9.4.8
@@ -78,6 +84,11 @@ jobs:
             compilerVersion: 8.6.5
             setup-method: ghcup
             allow-failure: false
+          - compiler: ghc-8.4.4
+            compilerKind: ghc
+            compilerVersion: 8.4.4
+            setup-method: ghcup
+            allow-failure: false
           - compiler: ghc-8.2.2
             compilerKind: ghc
             compilerVersion: 8.2.2
@@ -93,30 +104,16 @@ jobs:
       - name: apt-get install
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends gnupg ca-certificates dirmngr curl git software-properties-common libtinfo5
+          apt-get install -y --no-install-recommends gnupg ca-certificates dirmngr curl git software-properties-common libtinfo5 libnuma-dev
       - name: Install GHCup
         run: |
           mkdir -p "$HOME/.ghcup/bin"
-          curl -sL https://downloads.haskell.org/ghcup/0.1.30.0/x86_64-linux-ghcup-0.1.30.0 > "$HOME/.ghcup/bin/ghcup"
+          curl -sL https://downloads.haskell.org/ghcup/0.1.50.1/x86_64-linux-ghcup-0.1.50.1 > "$HOME/.ghcup/bin/ghcup"
           chmod a+x "$HOME/.ghcup/bin/ghcup"
       - name: Install cabal-install
         run: |
-          "$HOME/.ghcup/bin/ghcup" install cabal 3.12.1.0 || (cat "$HOME"/.ghcup/logs/*.* && false)
-          echo "CABAL=$HOME/.ghcup/bin/cabal-3.12.1.0 -vnormal+nowrap" >> "$GITHUB_ENV"
-      - name: Install GHC (hvr-ppa)
-        if: matrix.setup-method == 'hvr-ppa'
-        run: |
-          apt-add-repository -y 'ppa:hvr/ghc'
-          apt-get update
-          apt-get install -y "$HCNAME"
-          HC=$HCDIR/bin/$HCKIND
-          echo "HC=$HC" >> "$GITHUB_ENV"
-          echo "HCPKG=$HCDIR/bin/$HCKIND-pkg" >> "$GITHUB_ENV"
-          echo "HADDOCK=$HCDIR/bin/haddock" >> "$GITHUB_ENV"
-        env:
-          HCKIND: ${{ matrix.compilerKind }}
-          HCNAME: ${{ matrix.compiler }}
-          HCVER: ${{ matrix.compilerVersion }}
+          "$HOME/.ghcup/bin/ghcup" install cabal 3.16.0.0 || (cat "$HOME"/.ghcup/logs/*.* && false)
+          echo "CABAL=$HOME/.ghcup/bin/cabal-3.16.0.0 -vnormal+nowrap" >> "$GITHUB_ENV"
       - name: Install GHC (GHCup)
         if: matrix.setup-method == 'ghcup'
         run: |
@@ -134,7 +131,7 @@ jobs:
       - name: Install GHC (GHCup prerelease)
         if: matrix.setup-method == 'ghcup-prerelease'
         run: |
-          "$HOME/.ghcup/bin/ghcup" config add-release-channel https://raw.githubusercontent.com/haskell/ghcup-metadata/master/ghcup-prereleases-0.0.8.yaml;
+          "$HOME/.ghcup/bin/ghcup" config add-release-channel prereleases
           "$HOME/.ghcup/bin/ghcup" install ghc "$HCVER" || (cat "$HOME"/.ghcup/logs/*.* && false)
           HC=$("$HOME/.ghcup/bin/ghcup" whereis ghc "$HCVER")
           HCPKG=$(echo "$HC" | sed 's#ghc$#ghc-pkg#')
@@ -156,7 +153,7 @@ jobs:
           echo "HCNUMVER=$HCNUMVER" >> "$GITHUB_ENV"
           echo "ARG_TESTS=--enable-tests" >> "$GITHUB_ENV"
           echo "ARG_BENCH=--enable-benchmarks" >> "$GITHUB_ENV"
-          if [ $((HCNUMVER >= 91200)) -ne 0 ] ; then echo "HEADHACKAGE=true" >> "$GITHUB_ENV" ; else echo "HEADHACKAGE=false" >> "$GITHUB_ENV" ; fi
+          if [ $((HCNUMVER >= 91400)) -ne 0 ] ; then echo "HEADHACKAGE=true" >> "$GITHUB_ENV" ; else echo "HEADHACKAGE=false" >> "$GITHUB_ENV" ; fi
           echo "ARG_COMPILER=--$HCKIND --with-compiler=$HC" >> "$GITHUB_ENV"
         env:
           HCKIND: ${{ matrix.compilerKind }}
@@ -219,7 +216,7 @@ jobs:
           chmod a+x $HOME/.cabal/bin/cabal-plan
           cabal-plan --version
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: source
       - name: initial cabal.project for sdist
@@ -244,7 +241,11 @@ jobs:
           touch cabal.project.local
           echo "packages: ${PKGDIR_language_c}" >> cabal.project
           if [ $((HCNUMVER >= 80200)) -ne 0 ] ; then echo "package language-c" >> cabal.project ; fi
-          if [ $((HCNUMVER >= 80200)) -ne 0 ] ; then echo "    ghc-options: -Werror=missing-methods" >> cabal.project ; fi
+          if [ $((HCNUMVER >= 80200)) -ne 0 ] ; then echo "    ghc-options: -Werror=missing-methods -Werror=missing-fields" >> cabal.project ; fi
+          if [ $((HCNUMVER >= 90400)) -ne 0 ] ; then echo "package language-c" >> cabal.project ; fi
+          if [ $((HCNUMVER >= 90400)) -ne 0 ] ; then echo "    ghc-options: -Werror=unused-packages" >> cabal.project ; fi
+          if [ $((HCNUMVER >= 90000)) -ne 0 ] ; then echo "package language-c" >> cabal.project ; fi
+          if [ $((HCNUMVER >= 90000)) -ne 0 ] ; then echo "    ghc-options: -Werror=incomplete-patterns -Werror=incomplete-uni-patterns" >> cabal.project ; fi
           cat >> cabal.project <<EOF
           EOF
           if $HEADHACKAGE; then
