@@ -102,7 +102,7 @@ library
         directory <1.4,
         filepath <1.6,
         mtl <2.4,
-        pretty <1.2.0,
+        pretty <1.2,
         process <1.7
 
     if flag(usebytestrings)
