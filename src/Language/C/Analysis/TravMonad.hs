@@ -1,5 +1,6 @@
-{-# LANGUAGE MultiParamTypeClasses, TypeSynonymInstances, FlexibleContexts,FlexibleInstances,
+{-# LANGUAGE MultiParamTypeClasses, FlexibleContexts,FlexibleInstances,
              PatternGuards, RankNTypes, ScopedTypeVariables, LambdaCase #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Language.C.Analysis.TravMonad
@@ -67,9 +68,10 @@ import Data.IntMap (insert)
 import Data.Maybe
 import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, ap)
-import Control.Monad.Identity
+import Control.Monad.Identity (Identity, runIdentity)
 import Control.Monad.State.Class (MonadState, get, put, modify, gets)
-import Control.Monad.Trans
+import Control.Monad.Trans (MonadTrans, lift)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Prelude hiding (Applicative(..), lookup)
 
 class (Monad m) => MonadName m where

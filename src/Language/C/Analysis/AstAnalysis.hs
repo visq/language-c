@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, PatternGuards #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-patterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Language.C.Parser.Translation

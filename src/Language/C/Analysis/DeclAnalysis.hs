@@ -1,4 +1,5 @@
 {-# LANGUAGE PatternGuards, FlexibleContexts #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-patterns #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Language.C.Analysis.DeclAnalysis
