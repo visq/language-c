@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.1
+
+- Support `0.0f16` syntax.
+
 ## 0.10.0
 
 - Support for half-precision floating point `__fp16`, `_Float16`, and `_Float16x`.
