@@ -6,6 +6,9 @@ See http://visq.github.io/language-c/
 
 ## C Language Compatibility
 
+language-c has no comprehensive C23 support yet, but supports
+ - the `bool` keyword
+
 Currently unsupported C11 constructs:
  - static assertion 6.7.10 (`_Static_assert`)
  - generic selection 6.5.1.1 (`_Generic`)
