@@ -2,7 +2,7 @@ alignas _Alignas,
 alignof _Alignof __alignof alignof __alignof__,
 asm @__,
 atomic _Atomic,
-auto, break, bool _Bool,
+auto, break, bool _Bool bool,
 case, char, const @__, continue,
 complex _Complex __complex__
 default, do, double,
