@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.2
+
+- Accept C23 `bool` keyword.
+
 ## 0.10.1
 
 - Support `0.0f16` syntax.
