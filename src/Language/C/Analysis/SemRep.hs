@@ -410,7 +410,7 @@ data IntType =
     deriving (Data, Eq, Ord)
 
 instance Show IntType where
-    show TyBool = "_Bool"
+    show TyBool = "bool"
     show TyChar = "char"
     show TySChar = "signed char"
     show TyUChar = "unsigned char"

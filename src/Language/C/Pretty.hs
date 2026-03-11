@@ -254,7 +254,7 @@ instance Pretty CTypeSpec where
     pretty (CDoubleType _)      = text "double"
     pretty (CSignedType _)      = text "signed"
     pretty (CUnsigType _)       = text "unsigned"
-    pretty (CBoolType _)        = text "_Bool"
+    pretty (CBoolType _)        = text "bool"
     pretty (CComplexType _)     = text "_Complex"
     pretty (CInt128Type _)      = text "__int128"
     pretty (CUInt128Type _)     = text "__uint128"
