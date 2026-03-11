@@ -192,7 +192,7 @@ alignas         { CTokAlignas   _ }
 asm		{ CTokAsm	_ }
 auto		{ CTokAuto	_ }
 break		{ CTokBreak	_ }
-"_Bool"		{ CTokBool	_ }
+bool		{ CTokBool	_ }
 case		{ CTokCase	_ }
 char		{ CTokChar	_ }
 const		{ CTokConst	_ }
@@ -901,7 +901,7 @@ basic_type_name
   | double			{% withNodeInfo $1 $ CDoubleType }
   | signed			{% withNodeInfo $1 $ CSignedType }
   | unsigned			{% withNodeInfo $1 $ CUnsigType }
-  | "_Bool"			{% withNodeInfo $1 $ CBoolType }
+  | bool			{% withNodeInfo $1 $ CBoolType }
   | "_Complex"			{% withNodeInfo $1 $ CComplexType }
   | "__int128"                  {% withNodeInfo $1 $ CInt128Type }
   | "__int128_t"                {% withNodeInfo $1 $ CInt128Type }

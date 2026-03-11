@@ -78,7 +78,7 @@ data CToken = CTokLParen   !PosLength            -- `('
             | CTokAtomic   !PosLength            -- `_Atomic'
             | CTokAuto     !PosLength            -- `auto'
             | CTokBreak    !PosLength            -- `break'
-            | CTokBool     !PosLength            -- `_Bool'
+            | CTokBool     !PosLength            -- `bool'
             | CTokCase     !PosLength            -- `case'
             | CTokChar     !PosLength            -- `char'
             | CTokConst    !PosLength            -- `const'
@@ -338,7 +338,7 @@ instance Show CToken where
   showsPrec _ (CTokAsm      _  ) = showString "asm"
   showsPrec _ (CTokAtomic      _  ) = showString "_Atomic"
   showsPrec _ (CTokAuto     _  ) = showString "auto"
-  showsPrec _ (CTokBool _)       = showString "_Bool"
+  showsPrec _ (CTokBool _)       = showString "bool"
   showsPrec _ (CTokBreak    _  ) = showString "break"
   showsPrec _ (CTokCase     _  ) = showString "case"
   showsPrec _ (CTokChar     _  ) = showString "char"
